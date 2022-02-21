@@ -99,9 +99,9 @@ abstract class AbstractController implements ControllerInterface
     /**
      * Returns true if current call is a forwarded call.
      *
-     * @return boolean
+     * @return bool
      */
-    protected function isForwarded()
+    protected function isForwarded(): bool
     {
         return !empty(self::$callStack);
     }
@@ -151,7 +151,7 @@ abstract class AbstractController implements ControllerInterface
      * @return \Symfony\Component\HttpFoundation\JsonResponse
      *
      */
-    protected function json($data, int $status = 200, array $headers = [], array $context = []): JsonResponse
+    protected function json(mixed $data, int $status = 200, array $headers = [], array $context = []): JsonResponse
     {
         if ($this->container->has('serializer')) {
             $json = $this->container->get('serializer')->serialize(
@@ -182,14 +182,14 @@ abstract class AbstractController implements ControllerInterface
      *
      */
     protected function file(
-        $file,
+        \SplFileInfo|string $file,
         string $fileName = null,
         string $disposition = ResponseHeaderBag::DISPOSITION_ATTACHMENT
     ): BinaryFileResponse {
         $response = new BinaryFileResponse($file);
         $response->setContentDisposition(
             $disposition,
-            null === $fileName ? $response->getFile()->getFilename() : $fileName
+            $fileName === null ? $response->getFile()->getFilename() : $fileName
         );
 
         return $response;
@@ -250,13 +250,12 @@ abstract class AbstractController implements ControllerInterface
      *            The view name
      * @param array $parameters
      *            An array of parameters to pass to the view
-     * @param Response $response
+     * @param \Symfony\Component\HttpFoundation\Response|null $response
      *            A response instance
      *
      * @return \Symfony\Component\HttpFoundation\Response
-     *
      */
-    protected function render(string $view, array $parameters = [], Response $response = null): Response
+    protected function render(string $view, array $parameters = [], ?Response $response = null): Response
     {
         if ($this->container->has('templating')) {
             $content = $this->container->get('templating')->render($view, $parameters);

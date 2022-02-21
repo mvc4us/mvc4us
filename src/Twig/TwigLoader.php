@@ -13,7 +13,7 @@ final class TwigLoader
     private function __construct()
     {}
 
-    public static function load($projectDir)
+    public static function load($projectDir): Environment
     {
         $loader = new FilesystemLoader($projectDir . '/templates');
         $twig = new Environment($loader, [

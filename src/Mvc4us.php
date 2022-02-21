@@ -154,7 +154,7 @@ class Mvc4us
                 error_log(sprintf("%s\n  thrown in %s on line %s", $e, $e->getFile(), $e->getLine()));
             }
         }
-        $response = $response !== null ? $response : new Response();
+        $response = $response ?? new Response();
         $response->prepare($request);
         return $response;
     }

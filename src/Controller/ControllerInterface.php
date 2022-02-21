@@ -16,5 +16,5 @@ interface ControllerInterface
      * @param \Symfony\Component\HttpFoundation\Request $request
      * @return \Symfony\Component\HttpFoundation\Response|null
      */
-    function handle(Request $request): ?Response;
+    public function handle(Request $request): ?Response;
 }
