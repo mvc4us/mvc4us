@@ -10,6 +10,7 @@ use Symfony\Component\Routing\Matcher\RedirectableUrlMatcherInterface;
 /**
  *
  * @author erdem
+ * @internal
  */
 class NonRedirectingCompiledUrlMatcher extends CompiledUrlMatcher implements RedirectableUrlMatcherInterface
 {

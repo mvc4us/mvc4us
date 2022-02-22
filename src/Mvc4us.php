@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace Mvc4us;
 
 use Mvc4us\Config\Config;
-use Mvc4us\DependencyInjection\Loader\ServiceLoader;
+use Mvc4us\Controller\Exception\CircularForwardException;
+use Mvc4us\DependencyInjection\Loader\ServiceContainerLoader;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Routing\Matcher\RequestMatcherInterface;
+use Symfony\Component\Routing\RequestContext;
 
 /**
  * @author erdem
@@ -41,7 +42,7 @@ class Mvc4us
     {
         Config::load($this->projectDir, $environment);
 
-        $this->container = ServiceLoader::load($this->projectDir);
+        $this->container = ServiceContainerLoader::load($this->projectDir);
     }
 
     public function runCmd($controllerName, ?Request $request = null, $echo = false): ?string
@@ -66,7 +67,7 @@ class Mvc4us
         return null;
     }
 
-    private function run($controllerName, ?Request $request, $run): ?Response
+    private function run($controllerName, ?Request $request, $runMode): ?Response
     {
         $e = null;
         try {
@@ -74,7 +75,7 @@ class Mvc4us
                 $this->reload();
             }
 
-            if ($run === self::RUN_WEB && $controllerName === null) {
+            if ($runMode === self::RUN_WEB && $controllerName === null) {
                 /**
                  * @var \Symfony\Component\Routing\Router $router
                  */
@@ -99,15 +100,24 @@ class Mvc4us
                 throw new ResourceNotFoundException('Controller is not specified.');
             }
 
+            $methodName = 'handle';
+            if (is_array($controllerName)) {
+                list($controllerName, $methodName) = $controllerName;
+            }
+
             /**
              * @var \Mvc4us\Controller\AbstractController $controller
              */
             $controller = $this->container->get($controllerName);
             $controller->setContainer($this->container);
-            $response = $controller->handle($request);
+            if (is_callable($controller)) {
+                $response = $controller($request);
+            } else {
+                $response = $controller->$methodName($request);
+            }
         } catch (ResourceNotFoundException $e) {
             $response = new Response('', Response::HTTP_NOT_FOUND);
-            if ($run === self::RUN_WEB) {
+            if ($runMode === self::RUN_WEB) {
                 $message = sprintf('No routes found for "%s %s"', $request->getMethod(), $request->getPathInfo());
 
                 if ($referer = $request->headers->get('referer')) {
@@ -137,6 +147,8 @@ class Mvc4us
         } catch (InvalidArgumentException $e) {
             $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
         } catch (ServiceCircularReferenceException $e) {
+            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
+        } catch (CircularForwardException $e) {
             $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
         } catch (\TypeError $e) {
             $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);

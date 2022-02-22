@@ -7,11 +7,15 @@ namespace Mvc4us\Twig;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
+/**
+ * @internal
+ */
 final class TwigLoader
 {
 
     private function __construct()
-    {}
+    {
+    }
 
     public static function load($projectDir): Environment
     {

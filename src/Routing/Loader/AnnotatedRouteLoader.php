@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
-
 namespace Mvc4us\Routing\Loader;
 
 use Symfony\Component\Routing\Loader\AnnotationClassLoader;
 use Symfony\Component\Routing\Route;
 
-class AnnotatedRouteControllerLoader extends AnnotationClassLoader
+/**
+ * @internal
+ */
+class AnnotatedRouteLoader extends AnnotationClassLoader
 {
 
     protected function configureRoute(Route $route, \ReflectionClass $class, \ReflectionMethod $method, object $annot)
@@ -16,7 +18,7 @@ class AnnotatedRouteControllerLoader extends AnnotationClassLoader
         if ($method->getName() === '__invoke' || $method->getName() === 'handle') {
             $route->setDefault('_controller', $class->getName());
         } else {
-            $route->setDefault('_controller', $class->getName() . '::' . $method->getName());
+            $route->setDefault('_controller', [$class->getName(), $method->getName()]);
         }
     }
 }

@@ -35,7 +35,7 @@ final class Config
             } elseif (isset($_SERVER['MVC4US_ENV'])) {
                 $environment = $_SERVER['MVC4US_ENV'];
             } elseif (isset($_SERVER['HTTP_HOST']) && isset($_SERVER['SERVER_PORT'])) {
-                $environment = $_SERVER['HTTP_HOST'] . $_SERVER['SERVER_PORT'];
+                $environment = $_SERVER['HTTP_HOST'] . ':' . $_SERVER['SERVER_PORT'];
             }
             if (empty($environment)) {
                 // throw new InvalidConfigException('Unable to determine environment');
@@ -44,8 +44,7 @@ final class Config
         }
         self::$environment = $environment;
 
-        $configPath = $projectDir . '/config/env';
-
+        $configPath = $projectDir . '/config';
         if (is_dir($configPath . DIRECTORY_SEPARATOR . $environment)) {
             self::setConfigByPath($configPath, $environment);
             return;
