@@ -60,9 +60,10 @@ abstract class AbstractController implements ControllerInterface
      */
     protected function generateUrl(
         string $route,
-        array $parameters = [],
-        int $referenceType = UrlGeneratorInterface::ABSOLUTE_PATH
-    ): string {
+        array  $parameters = [],
+        int    $referenceType = UrlGeneratorInterface::ABSOLUTE_PATH
+    ): string
+    {
         return $this->container->get('router')->generate($route, $parameters, $referenceType);
     }
 
@@ -157,9 +158,9 @@ abstract class AbstractController implements ControllerInterface
             $json = $this->container->get('serializer')->serialize(
                 $data,
                 'json',
-                array_merge(array(
+                array_merge([
                     'json_encode_options' => JsonResponse::DEFAULT_ENCODING_OPTIONS
-                ), $context)
+                ], $context)
             );
 
             return new JsonResponse($json, $status, $headers, true);
@@ -183,9 +184,10 @@ abstract class AbstractController implements ControllerInterface
      */
     protected function file(
         \SplFileInfo|string $file,
-        string $fileName = null,
-        string $disposition = ResponseHeaderBag::DISPOSITION_ATTACHMENT
-    ): BinaryFileResponse {
+        string              $fileName = null,
+        string              $disposition = ResponseHeaderBag::DISPOSITION_ATTACHMENT
+    ): BinaryFileResponse
+    {
         $response = new BinaryFileResponse($file);
         $response->setContentDisposition(
             $disposition,

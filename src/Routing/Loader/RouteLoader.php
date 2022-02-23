@@ -8,6 +8,7 @@ use Mvc4us\Routing\NonRedirectingCompiledUrlMatcher;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\DelegatingLoader;
 use Symfony\Component\Config\Loader\LoaderResolver;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Routing\Loader\AnnotationDirectoryLoader;
 use Symfony\Component\Routing\Loader\PhpFileLoader;
 use Symfony\Component\Routing\Router;
@@ -27,7 +28,7 @@ final class RouteLoader
     {
     }
 
-    public static function load($projectDir): Router
+    public static function load(ContainerInterface $container, string $projectDir): void
     {
         $resolver = new LoaderResolver();
         $resolver->addLoader(
@@ -46,7 +47,7 @@ final class RouteLoader
                 // 'matcher_class' => RedirectingCompiledUrlMatcher::class
             ]
         );
-        return $router;
+        $container->set('router', $router);
     }
 }
 
