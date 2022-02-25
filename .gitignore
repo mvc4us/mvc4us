@@ -7,8 +7,12 @@
 
 # Enviroment related ignores
 .DS_Store
+Thumbs.db
 *~
-error.log
+
+# Log files
+*.log
+
 
 # Project related ignores
 composer.lock

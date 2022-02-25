@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Mvc4us\DependencyInjection\Loader;
+namespace Mvc4us\DependencyInjection;
 
-use Mvc4us\Routing\Loader\RouteLoader;
-use Mvc4us\Serializer\SerializerLoader;
-use Mvc4us\Twig\TwigLoader;
+use Mvc4us\DependencyInjection\Loader\RouteServiceLoader;
+use Mvc4us\DependencyInjection\Loader\SerializerServiceLoader;
+use Mvc4us\DependencyInjection\Loader\TwigServiceLoader;
 use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
  * @author erdem
  * @internal
  */
-final class ServiceContainerLoader
+final class ServiceContainer
 {
 
     /**
@@ -45,14 +45,11 @@ final class ServiceContainerLoader
             );
         }
 
+        RouteServiceLoader::load($container, $projectDir);
+        TwigServiceLoader::load($container, $projectDir);
+        SerializerServiceLoader::load($container);
+
         $container->compile();
-
-        RouteLoader::load($container, $projectDir);
-
-        TwigLoader::load($container, $projectDir);
-
-        SerializerLoader::load($container);
-
         return $container;
     }
 }

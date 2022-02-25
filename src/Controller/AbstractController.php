@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\Router;
 
 /**
  *
@@ -26,12 +27,15 @@ abstract class AbstractController implements ControllerInterface
 
     private static array $callStack = [];
 
-    public function setContainer(ContainerInterface $container): ?ContainerInterface
+    /**
+     * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+     * @return $this
+     * @internal
+     */
+    public function setContainer(ContainerInterface $container): static
     {
-        $previous = $this->container;
-        $this->container = $container;
-
-        return $previous;
+        $this->container = $this->container ?? $container;
+        return $this;
     }
 
     /**
@@ -53,6 +57,29 @@ abstract class AbstractController implements ControllerInterface
     }
 
     /**
+     * Gets Router from container
+     * @return \Symfony\Component\Routing\Router
+     * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
+     */
+    protected function getRouter(): Router
+    {
+        /** @noinspection PhpIncompatibleReturnTypeInspection */
+        return $this->container->get('router');
+    }
+
+    /**
+     * Gets a controller from container
+     * @param string $controllerName
+     * @return \Mvc4us\Controller\AbstractController
+     * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
+     */
+    protected function getController(string $controllerName): AbstractController
+    {
+        /** @noinspection PhpIncompatibleReturnTypeInspection */
+        return $this->container->get($controllerName)->setContainer($this->container);
+    }
+
+    /**
      * Generates a URL from the given parameters.
      * TODO
      *
@@ -60,11 +87,10 @@ abstract class AbstractController implements ControllerInterface
      */
     protected function generateUrl(
         string $route,
-        array  $parameters = [],
-        int    $referenceType = UrlGeneratorInterface::ABSOLUTE_PATH
-    ): string
-    {
-        return $this->container->get('router')->generate($route, $parameters, $referenceType);
+        array $parameters = [],
+        int $referenceType = UrlGeneratorInterface::ABSOLUTE_PATH
+    ): string {
+        return $this->getRouter()->generate($route, $parameters, $referenceType);
     }
 
     /**
@@ -86,13 +112,7 @@ abstract class AbstractController implements ControllerInterface
             throw new CircularForwardException('Infinite forward loop.');
         }
 
-        /**
-         *
-         * @var \Mvc4us\Controller\AbstractController $controller
-         */
-        $controller = $this->container->get($controllerName);
-        $controller->setContainer($this->container);
-        $response = $controller->handle($request);
+        $response = $this->getController($controllerName)->handle($request);
         unset(self::$callStack[static::class]);
         return $response;
     }
@@ -184,10 +204,9 @@ abstract class AbstractController implements ControllerInterface
      */
     protected function file(
         \SplFileInfo|string $file,
-        string              $fileName = null,
-        string              $disposition = ResponseHeaderBag::DISPOSITION_ATTACHMENT
-    ): BinaryFileResponse
-    {
+        string $fileName = null,
+        string $disposition = ResponseHeaderBag::DISPOSITION_ATTACHMENT
+    ): BinaryFileResponse {
         $response = new BinaryFileResponse($file);
         $response->setContentDisposition(
             $disposition,

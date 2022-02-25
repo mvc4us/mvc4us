@@ -2,30 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Mvc4us\Twig;
+namespace Mvc4us\DependencyInjection\Loader;
 
 use Mvc4us\Config\Config;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
 /**
  * @internal
  */
-final class TwigLoader
+final class TwigServiceLoader
 {
-
     private function __construct()
     {
     }
 
-    public static function load(ContainerInterface $container, string $projectDir): void
+    public static function load(ContainerBuilder $container, string $projectDir): void
     {
         if (!class_exists('Twig\\Environment')) {
             return;
         }
 
-        //TODO: set default options here and overwrite them from custom configuration.
+        //TODO: set default options here but overwrite them from custom configuration.
         $templateDir = $projectDir . '/templates';
         $cacheDir = $projectDir . '/var/cache/twig';
         $options = [
@@ -39,8 +38,10 @@ final class TwigLoader
             mkdir(directory: $cacheDir, recursive: true);
         }
         $loader = new FilesystemLoader($templateDir);
-        $twig = new Environment($loader, $options);
-        $container->set('twig', $twig);
+
+        $container->register('twig', Environment::class)
+            ->setArgument('$loader', $loader)
+            ->setArgument('$options', $options)
+            ->setPublic(true);
     }
 }
-

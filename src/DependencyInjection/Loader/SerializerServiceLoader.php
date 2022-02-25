@@ -2,8 +2,7 @@
 
 declare(strict_types=1);
 
-
-namespace Mvc4us\Serializer;
+namespace Mvc4us\DependencyInjection\Loader;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -15,11 +14,12 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 /**
  * @internal
  */
-final class SerializerLoader
+final class SerializerServiceLoader
 {
     private function __construct()
     {
@@ -38,7 +38,6 @@ final class SerializerLoader
             },
         ];
         $classMetadataFactory = new ClassMetadataFactory(new AnnotationLoader(new AnnotationReader()));
-        $encoders = [new XmlEncoder(), new JsonEncoder()];
         $normalizers = [
             new ObjectNormalizer(
                 classMetadataFactory: $classMetadataFactory,
@@ -46,7 +45,13 @@ final class SerializerLoader
             ),
             new DateTimeNormalizer()
         ];
-        $serializer = new Serializer($normalizers, $encoders);
-        $container->set('serializer', $serializer);
+        $encoders = [new XmlEncoder(), new JsonEncoder()];
+
+        $container->register(Serializer::class)
+            ->setArgument('$normalizers', $normalizers)
+            ->setArgument('$encoders', $encoders)
+            ->setAutowired(true);
+        $container->setAlias(SerializerInterface::class, Serializer::class);
+        $container->setAlias('serializer', Serializer::class)->setPublic(true);
     }
 }

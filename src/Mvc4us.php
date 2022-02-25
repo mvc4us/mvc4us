@@ -6,7 +6,7 @@ namespace Mvc4us;
 
 use Mvc4us\Config\Config;
 use Mvc4us\Controller\Exception\CircularForwardException;
-use Mvc4us\DependencyInjection\Loader\ServiceContainerLoader;
+use Mvc4us\DependencyInjection\ServiceContainer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException;
@@ -42,7 +42,7 @@ class Mvc4us
     {
         Config::load($this->projectDir, $environment);
 
-        $this->container = ServiceContainerLoader::load($this->projectDir);
+        $this->container = ServiceContainer::load($this->projectDir);
     }
 
     public function runCmd($controllerName, ?Request $request = null, $echo = false): ?string

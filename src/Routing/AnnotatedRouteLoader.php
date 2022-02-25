@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mvc4us\Routing\Loader;
+namespace Mvc4us\Routing;
 
 use Symfony\Component\Routing\Loader\AnnotationClassLoader;
 use Symfony\Component\Routing\Route;
