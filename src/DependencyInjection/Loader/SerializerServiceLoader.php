@@ -6,6 +6,7 @@ namespace Mvc4us\DependencyInjection\Loader;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Mapping\Factory\ClassMetadataFactory;
@@ -41,6 +42,7 @@ final class SerializerServiceLoader
         $normalizers = [
             new ObjectNormalizer(
                 classMetadataFactory: $classMetadataFactory,
+                propertyTypeExtractor: new ReflectionExtractor(),
                 defaultContext: $defaultContext
             ),
             new DateTimeNormalizer()

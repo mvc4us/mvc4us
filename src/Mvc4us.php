@@ -144,18 +144,14 @@ class Mvc4us
             $reflectionObjectProp->setValue($e, $message);
         } catch (ServiceNotFoundException $e) {
             $response = new Response('', Response::HTTP_NOT_FOUND);
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException|ServiceCircularReferenceException|CircularForwardException $e) {
             $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
-        } catch (ServiceCircularReferenceException $e) {
-            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
-        } catch (CircularForwardException $e) {
-            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
-        } catch (\TypeError $e) {
-            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
-        } catch (\Exception $e) {
-            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
-        } catch (\Error $e) {
-            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
+//        } catch (\TypeError $e) {
+//            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
+//        } catch (\Exception $e) {
+//            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
+//        } catch (\Error $e) {
+//            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         if ($e !== null) {
