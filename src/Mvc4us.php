@@ -102,12 +102,9 @@ class Mvc4us
 
             $methodName = 'handle';
             if (is_array($controllerName)) {
-                list($controllerName, $methodName) = $controllerName;
+                [$controllerName, $methodName] = $controllerName;
             }
 
-            /**
-             * @var \Mvc4us\Controller\AbstractController $controller
-             */
             $controller = $this->container->get($controllerName);
             $controller->setContainer($this->container);
             if (is_callable($controller)) {

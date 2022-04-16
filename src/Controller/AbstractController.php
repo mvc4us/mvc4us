@@ -14,11 +14,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\Router;
+use Symfony\Component\Serializer\Encoder\JsonEncode;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 /**
- *
  * @author erdem
- *
  */
 abstract class AbstractController implements ControllerInterface
 {
@@ -29,10 +29,10 @@ abstract class AbstractController implements ControllerInterface
 
     /**
      * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
-     * @return $this
+     * @return \Mvc4us\Controller\AbstractController
      * @internal
      */
-    public function setContainer(ContainerInterface $container): static
+    public function setContainer(ContainerInterface $container): AbstractController
     {
         $this->container = $this->container ?? $container;
         return $this;
@@ -58,8 +58,8 @@ abstract class AbstractController implements ControllerInterface
 
     /**
      * Gets Router from container
+     *
      * @return \Symfony\Component\Routing\Router
-     * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
      */
     protected function getRouter(): Router
     {
@@ -69,13 +69,12 @@ abstract class AbstractController implements ControllerInterface
 
     /**
      * Gets a controller from container
+     *
      * @param string $controllerName
      * @return \Mvc4us\Controller\AbstractController
-     * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
      */
     protected function getController(string $controllerName): AbstractController
     {
-        /** @noinspection PhpIncompatibleReturnTypeInspection */
         return $this->container->get($controllerName)->setContainer($this->container);
     }
 
@@ -98,11 +97,7 @@ abstract class AbstractController implements ControllerInterface
      *
      * @param string $controllerName
      * @param \Symfony\Component\HttpFoundation\Request $request
-     *
      * @return \Symfony\Component\HttpFoundation\Response
-     *
-     * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
-     * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
      * @throws \Mvc4us\Controller\Exception\CircularForwardException
      */
     protected function forward(string $controllerName, Request $request): Response
@@ -142,65 +137,74 @@ abstract class AbstractController implements ControllerInterface
     /**
      * Returns a RedirectResponse to the given route with the given parameters.
      *
-     * @param string $route
-     *            The name of the route
-     * @param array $parameters
-     *            An array of parameters
-     * @param int $status
-     *            The status code to use for the Response
-     *
+     * @param string $route     The name of the route
+     * @param array $parameters An array of parameters
+     * @param int $status       The status code to use for the Response
      * @return \Symfony\Component\HttpFoundation\RedirectResponse
-     *
      */
-    protected function redirectToRoute(string $route, array $parameters = array(), int $status = 302): RedirectResponse
+    protected function redirectToRoute(string $route, array $parameters = [], int $status = 302): RedirectResponse
     {
         return $this->redirect($this->generateUrl($route, $parameters), $status);
     }
 
     /**
+     * Parses a json string and returns as an object or populates an object instance using Symfony Serializer
+     *
+     * @param string $json          A json string
+     * @param object|string $object An object instance or type of object
+     * @param array $context        Context to pass to serializer when using serializer component
+     * @return mixed
+     */
+    protected function parseJson(string $json, object|string $object, array $context = []): mixed
+    {
+        if (!$this->container->has('serializer')) {
+            throw new \LogicException(
+                'Serializer not found. Try running "composer require symfony/serializer".'
+            );
+        }
+        return $this->container->get('serializer')->deserialize(
+            $json,
+            is_object($object) ? get_class($object) : $object,
+            'json',
+            array_merge_recursive(
+                [AbstractNormalizer::OBJECT_TO_POPULATE => is_object($object) ? $object : null],
+                $context
+            )
+        );
+    }
+
+    /**
      * Returns a JsonResponse that uses the serializer component if enabled, or json_encode.
      *
-     * @param mixed $data
-     *            The response data
-     * @param int $status
-     *            The status code to use for the Response
-     * @param array $headers
-     *            Array of extra headers to add
-     * @param array $context
-     *            Context to pass to serializer when using serializer component
-     *
+     * @param mixed $data    The response data
+     * @param int $status    The status code to use for the Response
+     * @param array $headers Array of extra headers to add
+     * @param array $context Context to pass to serializer when using serializer component
      * @return \Symfony\Component\HttpFoundation\JsonResponse
-     *
      */
     protected function json(mixed $data, int $status = 200, array $headers = [], array $context = []): JsonResponse
     {
-        if ($this->container->has('serializer')) {
-            $json = $this->container->get('serializer')->serialize(
-                $data,
-                'json',
-                array_merge([
-                    'json_encode_options' => JsonResponse::DEFAULT_ENCODING_OPTIONS
-                ], $context)
-            );
-
-            return new JsonResponse($json, $status, $headers, true);
+        if (!$this->container->has('serializer')) {
+            return new JsonResponse($data, $status, $headers);
         }
+        $json = $this->container->get('serializer')->serialize(
+            $data,
+            'json',
+            array_merge([
+                JsonEncode::OPTIONS => JsonResponse::DEFAULT_ENCODING_OPTIONS
+            ], $context)
+        );
 
-        return new JsonResponse($data, $status, $headers);
+        return new JsonResponse($json, $status, $headers, true);
     }
 
     /**
      * Returns a BinaryFileResponse object with original or customized file name and disposition header.
      *
-     * @param \SplFileInfo|string $file
-     *            File object or path to file to be sent as response
-     * @param string|null $fileName
-     *            File name to be sent to response or null (will use original file name)
-     * @param string $disposition
-     *            Disposition of response ("attachment" is default, other type is "inline")
-     *
+     * @param \SplFileInfo|string $file File object or path to file to be sent as response
+     * @param string|null $fileName     File name to be sent to response or null (will use original file name)
+     * @param string $disposition       Disposition of response ("attachment" is default, other type is "inline")
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     *
      */
     protected function file(
         \SplFileInfo|string $file,
@@ -219,13 +223,9 @@ abstract class AbstractController implements ControllerInterface
     /**
      * Adds a flash message to the current session for type.
      *
-     * @param string $type
-     *            The type
-     * @param string $message
-     *            The message
-     *
+     * @param string $type    The type
+     * @param string $message The message
      * @throws \LogicException
-     *
      */
     protected function addFlash(string $type, string $message)
     {
@@ -241,13 +241,9 @@ abstract class AbstractController implements ControllerInterface
     /**
      * Returns a rendered view.
      *
-     * @param string $view
-     *            The view name
-     * @param array $parameters
-     *            An array of parameters to pass to the view
-     *
+     * @param string $view      The view name
+     * @param array $parameters An array of parameters to pass to the view
      * @return string The rendered view
-     *
      */
     protected function renderView(string $view, array $parameters = []): string
     {
@@ -267,13 +263,9 @@ abstract class AbstractController implements ControllerInterface
     /**
      * Renders a view.
      *
-     * @param string $view
-     *            The view name
-     * @param array $parameters
-     *            An array of parameters to pass to the view
-     * @param \Symfony\Component\HttpFoundation\Response|null $response
-     *            A response instance
-     *
+     * @param string $view                                              The view name
+     * @param array $parameters                                         An array of parameters to pass to the view
+     * @param \Symfony\Component\HttpFoundation\Response|null $response A response instance
      * @return \Symfony\Component\HttpFoundation\Response
      */
     protected function render(string $view, array $parameters = [], ?Response $response = null): Response
@@ -288,7 +280,7 @@ abstract class AbstractController implements ControllerInterface
             );
         }
 
-        if (null === $response) {
+        if ($response === null) {
             $response = new Response();
         }
 
