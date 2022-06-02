@@ -131,7 +131,7 @@ class Mvc4us
 
                 $reflectionObject = new \ReflectionObject($e);
                 $reflectionObjectProp = $reflectionObject->getProperty('message');
-                $reflectionObjectProp->setAccessible(true);
+                //$reflectionObjectProp->setAccessible(true);
                 $reflectionObjectProp->setValue($e, $message);
             }
         } catch (MethodNotAllowedException $e) {
@@ -145,7 +145,7 @@ class Mvc4us
 
             $reflectionObject = new \ReflectionObject($e);
             $reflectionObjectProp = $reflectionObject->getProperty('message');
-            $reflectionObjectProp->setAccessible(true);
+            //$reflectionObjectProp->setAccessible(true);
             $reflectionObjectProp->setValue($e, $message);
         } catch (ServiceNotFoundException $e) {
             $response = new Response('', Response::HTTP_NOT_FOUND);
