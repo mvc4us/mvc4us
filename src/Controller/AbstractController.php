@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mvc4us\Controller;
 
+use Mvc4us\Config\Config;
 use Mvc4us\Controller\Exception\CircularForwardException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -102,13 +103,14 @@ abstract class AbstractController implements ControllerInterface
      */
     protected function forward(string $controllerName, Request $request): Response
     {
-        self::$callStack[static::class] = true;
-        if (array_key_exists($controllerName, self::$callStack)) {
+        self::$callStack[static::class] = (self::$callStack[static::class] ?? 0) + 1;
+
+        $maxStack = Config::get('app', 'controller_forward_limit') ?? 0;
+        if ((self::$callStack[$controllerName] ?? 0) > $maxStack) {
             throw new CircularForwardException('Infinite forward loop.');
         }
-
-        $response = $this->getController($controllerName)->handle($request);
-        unset(self::$callStack[static::class]);
+        $response = $this->getController($controllerName)->handle($request->duplicate());
+        self::$callStack[static::class]--;
         return $response;
     }
 
