@@ -38,7 +38,7 @@ class Mvc4us
         $this->reload($environment);
     }
 
-    public function reload($environment = null)
+    public function reload($environment = null): void
     {
         Config::load($this->projectDir, $environment);
 
@@ -70,11 +70,17 @@ class Mvc4us
     private function run($controllerName, ?Request $request, $runMode): ?Response
     {
         $e = null;
-        try {
-            if ($this->container === null) {
-                $this->reload();
-            }
+        if ($this->container === null) {
+            $this->reload();
+        }
+        /**
+         * @var \Symfony\Component\HttpFoundation\RequestStack $requestStack
+         */
+        $requestStack = $this->container->get('request_stack');
+        // TODO: Check if below flag is really needed.
+        $popRequest = false;
 
+        try {
             if ($runMode === self::RUN_WEB && $controllerName === null) {
                 /**
                  * @var \Symfony\Component\Routing\Router $router
@@ -105,6 +111,8 @@ class Mvc4us
                 [$controllerName, $methodName] = $controllerName;
             }
 
+            $requestStack->push($request);
+            $popRequest = true;
             $controller = $this->container->get($controllerName);
             $controller->setContainer($this->container);
             if (is_callable($controller)) {
@@ -129,7 +137,7 @@ class Mvc4us
         } catch (MethodNotAllowedException $e) {
             $response = new Response('', Response::HTTP_METHOD_NOT_ALLOWED);
             $message = sprintf(
-                'No routes found for "%s %s". Method Not Allowed (Allow: %s)',
+                'Method "%s" not allowed for route "%s". (Allow: %s)',
                 $request->getMethod(),
                 $request->getPathInfo(),
                 implode(', ', $e->getAllowedMethods())
@@ -161,6 +169,9 @@ class Mvc4us
         }
         $response = $response ?? new Response();
         $response->prepare($request);
+        if ($popRequest) {
+            $requestStack->pop();
+        }
         return $response;
     }
 }

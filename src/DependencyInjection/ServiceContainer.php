@@ -13,6 +13,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * @author erdem
@@ -36,14 +37,19 @@ final class ServiceContainer
 
         try {
             $serviceLoader->load('services.php');
-        } catch (FileLocatorFileNotFoundException $e) {
+        } catch (FileLocatorFileNotFoundException) {
             $definition = new Definition();
             $definition->setAutowired(true)->setAutoconfigured(true)->setPublic(true);
-            $serviceLoader->registerClasses($definition, 'App\\', $projectDir . '/src/*', null);
+            $serviceLoader->registerClasses($definition, 'App\\', $projectDir . '/src/*');
             error_log(
-                "File '/config/services.php' not found. All container objects defined as public 'App\\' => '${projectDir}/src/*'."
+                "File '/config/services.php' not found. All container objects defined as public 'App\\' => '$projectDir/src/*'."
             );
+        } catch (\Exception $e) {
+            error_log('Unexpected exception. ' . $e);
         }
+
+        $container->register(RequestStack::class);
+        $container->setAlias('request_stack', RequestStack::class)->setPublic(true);
 
         RouteServiceLoader::load($container, $projectDir);
         TwigServiceLoader::load($container, $projectDir);

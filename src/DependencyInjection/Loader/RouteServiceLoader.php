@@ -15,7 +15,6 @@ use Symfony\Component\Routing\Loader\PhpFileLoader;
 use Symfony\Component\Routing\Router;
 
 /**
- *
  * @author erdem
  * @internal
  */
