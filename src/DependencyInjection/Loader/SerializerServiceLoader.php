@@ -11,7 +11,7 @@ use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Mapping\Factory\ClassMetadataFactory;
 use Symfony\Component\Serializer\Mapping\Loader\AnnotationLoader;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
 use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
@@ -32,20 +32,16 @@ final class SerializerServiceLoader
             return;
         }
 
-        $defaultContext = [
-            'circular_reference_limit' => 1,
-            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object, $format, $context) {
-                return null;
-            },
-        ];
+        $defaultContext = [];
         $classMetadataFactory = new ClassMetadataFactory(new AnnotationLoader(new AnnotationReader()));
         $normalizers = [
+            new DateTimeNormalizer(),
+            new ArrayDenormalizer(),
             new ObjectNormalizer(
                 classMetadataFactory: $classMetadataFactory,
                 propertyTypeExtractor: new ReflectionExtractor(),
                 defaultContext: $defaultContext
             ),
-            new DateTimeNormalizer()
         ];
         $encoders = [new XmlEncoder(), new JsonEncoder()];
 

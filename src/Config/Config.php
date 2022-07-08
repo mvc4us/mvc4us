@@ -25,7 +25,7 @@ final class Config
     {
     }
 
-    public static function load($projectDir, $environment = null)
+    public static function load(string $projectDir, ?string $environment = null): void
     {
         if (empty($environment)) {
             if (self::$environment !== null) {
@@ -137,7 +137,7 @@ final class Config
         return null;
     }
 
-    private static function setConfigByPath($configPath, $environment)
+    private static function setConfigByPath(string $configPath, string $environment): void
     {
         $config = [];
         foreach (glob($configPath . DIRECTORY_SEPARATOR . $environment . '/*.toml') as $configFile) {

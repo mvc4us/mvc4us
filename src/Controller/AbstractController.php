@@ -6,7 +6,7 @@ namespace Mvc4us\Controller;
 
 use Mvc4us\Config\Config;
 use Mvc4us\Controller\Exception\CircularForwardException;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\TaggedContainerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -24,19 +24,16 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 abstract class AbstractController implements ControllerInterface
 {
 
-    private ?ContainerInterface $container = null;
+    private ?TaggedContainerInterface $container = null;
 
     private static array $callStack = [];
 
     /**
-     * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
-     * @return \Mvc4us\Controller\AbstractController
-     * @internal
+     * @param \Symfony\Component\DependencyInjection\TaggedContainerInterface $container
      */
-    public function setContainer(ContainerInterface $container): AbstractController
+    public function setContainer(TaggedContainerInterface $container): void
     {
         $this->container = $this->container ?? $container;
-        return $this;
     }
 
     /**
@@ -60,23 +57,31 @@ abstract class AbstractController implements ControllerInterface
     /**
      * Gets Router from container
      *
-     * @return \Symfony\Component\Routing\Router
+     * @return \Symfony\Component\Routing\Router|null
      */
-    protected function getRouter(): Router
+    protected function getRouter(): ?Router
     {
-        /** @noinspection PhpIncompatibleReturnTypeInspection */
-        return $this->container->get('router');
+        $router = $this->container->get('router');
+        if (!$router instanceof Router) {
+            return null;
+        }
+        return $router;
     }
 
     /**
      * Gets a controller from container
      *
      * @param string $controllerName
-     * @return \Mvc4us\Controller\AbstractController
+     * @return \Mvc4us\Controller\AbstractController|null
      */
-    protected function getController(string $controllerName): AbstractController
+    protected function getController(string $controllerName): ?AbstractController
     {
-        return $this->container->get($controllerName)->setContainer($this->container);
+        $controller = $this->container->get($controllerName);
+        if (!$controller instanceof AbstractController) {
+            return null;
+        }
+        $controller->setContainer($this->container);
+        return $controller;
     }
 
     /**

@@ -27,22 +27,19 @@ final class RouteServiceLoader
     public static function load(ContainerBuilder $container, string $projectDir): void
     {
         $resolver = new LoaderResolver();
-        $resolver->addLoader(
-            new AnnotationDirectoryLoader(new FileLocator($projectDir . '/src'), new AnnotatedRouteLoader())
-        );
         $resolver->addLoader(new PhpFileLoader(new FileLocator($projectDir . '/config')));
-
+        $resolver->addLoader(new AnnotationDirectoryLoader(new FileLocator(), new AnnotatedRouteLoader()));
         $routeLoader = new DelegatingLoader($resolver);
 
         // TODO: Make redirection configurable
-        $container->register('router', Router::class)
+        $container->register(Router::class)
             ->setArgument('$loader', $routeLoader)
             ->setArgument('$resource', 'routes.php')
             ->setArgument('$options', [
                 'matcher_class' => NonRedirectingCompiledUrlMatcher::class
                 // 'matcher_class' => RedirectingCompiledUrlMatcher::class
-            ])
-            ->setPublic(true);
+            ]);
+        $container->setAlias('router', Router::class)->setPublic(true);
     }
 }
 

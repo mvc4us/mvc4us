@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Mvc4us;
 
 use Mvc4us\Config\Config;
+use Mvc4us\Controller\ControllerInterface;
 use Mvc4us\Controller\Exception\CircularForwardException;
 use Mvc4us\DependencyInjection\ServiceContainer;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Mvc4us\MiddleWare\Exception\MiddlewareException;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
+use Symfony\Component\DependencyInjection\TaggedContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
@@ -24,28 +26,28 @@ use Symfony\Component\Routing\RequestContext;
 class Mvc4us
 {
 
-    private const RUN_CMD = 1;
+    public const RUN_CMD = 1;
 
-    private const RUN_WEB = 2;
+    public const RUN_WEB = 2;
 
-    private ?ContainerInterface $container = null;
+    private ?TaggedContainerInterface $container = null;
 
     private string $projectDir;
 
-    public function __construct($projectDir, $environment = null)
+    public function __construct(string $projectDir, ?string $environment = null)
     {
         $this->projectDir = $projectDir;
         $this->reload($environment);
     }
 
-    public function reload($environment = null): void
+    public function reload(?string $environment = null): void
     {
         Config::load($this->projectDir, $environment);
 
         $this->container = ServiceContainer::load($this->projectDir);
     }
 
-    public function runCmd($controllerName, ?Request $request = null, $echo = false): ?string
+    public function runCmd(string $controllerName, ?Request $request = null, bool $echo = false): ?string
     {
         $request = $request ?? new Request($_SERVER['argv']);
         $request->setMethod('CLI');
@@ -67,7 +69,7 @@ class Mvc4us
         return null;
     }
 
-    private function run($controllerName, ?Request $request, $runMode): ?Response
+    private function run(?string $controllerName, Request $request, int $runMode): ?Response
     {
         $e = null;
         if ($this->container === null) {
@@ -77,32 +79,58 @@ class Mvc4us
          * @var \Symfony\Component\HttpFoundation\RequestStack $requestStack
          */
         $requestStack = $this->container->get('request_stack');
-        // TODO: Check if below flag is really needed.
+        // TODO: Check if below flag is really needed (when run as memory resident application server).
         $popRequest = false;
 
         try {
-            if ($runMode === self::RUN_WEB && $controllerName === null) {
-                /**
-                 * @var \Symfony\Component\Routing\Router $router
-                 */
-                $router = $this->container->get('router');
-
-                $context = new RequestContext();
-                $context->fromRequest($request);
-                $router->setContext($context);
-                $matcher = $router->getMatcher();
-
-                if ($matcher instanceof RequestMatcherInterface) {
-                    $parameters = $matcher->matchRequest($request);
-                } else {
-                    $parameters = $matcher->match($request->getPathInfo());
+            $request->attributes->set('_runMode', $runMode);
+            $requestStack->push($request);
+            $popRequest = true;
+            //TODO: try to implement a matcher for command
+            if ($runMode === self::RUN_WEB) {
+                try {
+                    $beforeMatcherMiddlewares = $this->container->findTaggedServiceIds('app_before_matcher');
+                    foreach ($beforeMatcherMiddlewares as $id => $tags) {
+                        /**
+                         * @var \Mvc4us\MiddleWare\BeforeMatcherInterface $beforeMatcherMiddleware
+                         */
+                        $beforeMatcherMiddleware = $this->container->get($id);
+                        if (method_exists($beforeMatcherMiddleware, 'setContainer')) {
+                            $beforeMatcherMiddleware->setContainer($this->container);
+                        }
+                        $response = $beforeMatcherMiddleware->processBeforeMatcher($requestStack);
+                        if ($response !== null) {
+                            goto skipController;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    throw new MiddlewareException($e);
                 }
 
-                $request->attributes->add($parameters);
+                if ($controllerName === null) {
+                    /**
+                     * @var \Symfony\Component\Routing\Router $router
+                     */
+                    $router = $this->container->get('router');
 
-                $controllerName = $request->attributes->get('_controller');
+                    $context = new RequestContext();
+                    $context->fromRequest($request);
+                    $router->setContext($context);
+                    $matcher = $router->getMatcher();
+
+                    if ($matcher instanceof RequestMatcherInterface) {
+                        $parameters = $matcher->matchRequest($request);
+                    } else {
+                        $parameters = $matcher->match($request->getPathInfo());
+                    }
+
+                    $request->attributes->add($parameters);
+
+                    $controllerName = $request->attributes->get('_controller');
+                }
             }
-            if ($controllerName == null) {
+
+            if ($controllerName === null) {
                 throw new ResourceNotFoundException('Controller is not specified.');
             }
 
@@ -111,10 +139,33 @@ class Mvc4us
                 [$controllerName, $methodName] = $controllerName;
             }
 
-            $requestStack->push($request);
-            $popRequest = true;
+            /**
+             * @var ControllerInterface $controller
+             */
             $controller = $this->container->get($controllerName);
-            $controller->setContainer($this->container);
+            if (method_exists($controller, 'setContainer')) {
+                $controller->setContainer($this->container);
+            }
+
+            try {
+                $beforeMiddlewares = $this->container->findTaggedServiceIds('app_before');
+                foreach ($beforeMiddlewares as $id => $tags) {
+                    /**
+                     * @var \Mvc4us\MiddleWare\BeforeControllerInterface $beforeMiddleware
+                     */
+                    $beforeMiddleware = $this->container->get($id);
+                    if (method_exists($beforeMiddleware, 'setContainer')) {
+                        $beforeMiddleware->setContainer($this->container);
+                    }
+                    $response = $beforeMiddleware->processBefore($requestStack);
+                    if ($response !== null) {
+                        goto skipController;
+                    }
+                }
+            } catch (\Throwable $e) {
+                throw new MiddlewareException($e);
+            }
+
             if (is_callable($controller)) {
                 $response = $controller($request);
             } else {
@@ -159,16 +210,39 @@ class Mvc4us
 //            $response = new Response('', Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
+        skipController:
+        error_log(sprintf($request->getMethod() . " Origin: %s", $request->server->get('HTTP_ORIGIN')));
         if ($e !== null) {
             $request->attributes->set('exception', $e);
             if ($this->container->has('logger')) {
                 // TODO logger service
+                error_log("[error] Replace this with actual logger service.");
             } else {
                 error_log(sprintf("%s\n  thrown in %s on line %s", $e, $e->getFile(), $e->getLine()));
             }
         }
+
         $response = $response ?? new Response();
         $response->prepare($request);
+
+        try {
+            $afterMiddlewares = $this->container->findTaggedServiceIds('app_after');
+            foreach ($afterMiddlewares as $id => $tags) {
+                /**
+                 * @var \Mvc4us\MiddleWare\AfterControllerInterface $afterMiddleware
+                 */
+                $afterMiddleware = $this->container->get($id);
+                if (method_exists($afterMiddleware, 'setContainer')) {
+                    $afterMiddleware->setContainer($this->container);
+                }
+                if (!$afterMiddleware->processAfter($requestStack, $response)) {
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            throw new MiddlewareException($e);
+        }
+
         if ($popRequest) {
             $requestStack->pop();
         }

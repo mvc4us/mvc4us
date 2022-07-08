@@ -17,4 +17,5 @@ interface ControllerInterface
      * @return \Symfony\Component\HttpFoundation\Response|null
      */
     public function handle(Request $request): ?Response;
+
 }
