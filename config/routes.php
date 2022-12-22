@@ -7,8 +7,8 @@ declare(strict_types=1);
  *
  * @link https://symfony.com/doc/current/routing.html
  */
+
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 
 return function (RoutingConfigurator $routes) {
-    ;
 };

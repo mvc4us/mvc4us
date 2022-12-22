@@ -6,8 +6,6 @@ use Mvc4us\Mvc4us;
 
 /**
  * Absolute application path
- *
- * @var string
  */
 define('APP_DIR', dirname(__DIR__));
 

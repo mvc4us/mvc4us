@@ -8,7 +8,9 @@ use Mvc4us\Config\Config;
 use Mvc4us\Controller\ControllerInterface;
 use Mvc4us\Controller\Exception\CircularForwardException;
 use Mvc4us\DependencyInjection\ServiceContainer;
+use Mvc4us\Logger\LoggerConfig;
 use Mvc4us\MiddleWare\Exception\MiddlewareException;
+use Mvc4us\MiddleWare\MiddlewareConstants;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
@@ -89,7 +91,9 @@ class Mvc4us
             //TODO: try to implement a matcher for command
             if ($runMode === self::RUN_WEB) {
                 try {
-                    $beforeMatcherMiddlewares = $this->container->findTaggedServiceIds('app_before_matcher');
+                    $beforeMatcherMiddlewares = $this->container->findTaggedServiceIds(
+                        MiddlewareConstants::BEFORE_MATCHER
+                    );
                     foreach ($beforeMatcherMiddlewares as $id => $tags) {
                         /**
                          * @var \Mvc4us\MiddleWare\BeforeMatcherInterface $beforeMatcherMiddleware
@@ -148,7 +152,7 @@ class Mvc4us
             }
 
             try {
-                $beforeMiddlewares = $this->container->findTaggedServiceIds('app_before');
+                $beforeMiddlewares = $this->container->findTaggedServiceIds(MiddlewareConstants::BEFORE_CONTROLLER);
                 foreach ($beforeMiddlewares as $id => $tags) {
                     /**
                      * @var \Mvc4us\MiddleWare\BeforeControllerInterface $beforeMiddleware
@@ -211,22 +215,18 @@ class Mvc4us
         }
 
         skipController:
-        error_log(sprintf($request->getMethod() . " Origin: %s", $request->server->get('HTTP_ORIGIN')));
         if ($e !== null) {
             $request->attributes->set('exception', $e);
-            if ($this->container->has('logger')) {
-                // TODO logger service
-                error_log("[error] Replace this with actual logger service.");
-            } else {
-                error_log(sprintf("%s\n  thrown in %s on line %s", $e, $e->getFile(), $e->getLine()));
-            }
+            LoggerConfig::getInstance()->error(
+                sprintf("%s\n  thrown in %s on line %s", $e, $e->getFile(), $e->getLine())
+            );
         }
 
         $response = $response ?? new Response();
         $response->prepare($request);
 
         try {
-            $afterMiddlewares = $this->container->findTaggedServiceIds('app_after');
+            $afterMiddlewares = $this->container->findTaggedServiceIds(MiddlewareConstants::AFTER_CONTROLLER);
             foreach ($afterMiddlewares as $id => $tags) {
                 /**
                  * @var \Mvc4us\MiddleWare\AfterControllerInterface $afterMiddleware

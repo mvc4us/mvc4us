@@ -12,6 +12,8 @@ final class Config
 
     private static ?string $environment = null;
 
+    private static string $projectDir = "";
+
     private static array $config = [
         'app' => [
             'debug' => false
@@ -27,6 +29,8 @@ final class Config
 
     public static function load(string $projectDir, ?string $environment = null): void
     {
+        self::$projectDir = $projectDir;
+
         if (empty($environment)) {
             if (self::$environment !== null) {
                 $environment = self::$environment;
@@ -44,7 +48,7 @@ final class Config
         }
         self::$environment = $environment;
 
-        $configPath = $projectDir . '/config';
+        $configPath = self::$projectDir . '/config';
         if (is_dir($configPath . DIRECTORY_SEPARATOR . $environment)) {
             self::setConfigByPath($configPath, $environment);
             return;
@@ -82,16 +86,6 @@ final class Config
     }
 
     /**
-     * Get environment name
-     *
-     * @return string|null
-     */
-    public static function environment(): ?string
-    {
-        return self::$environment;
-    }
-
-    /**
      * Check if in debug mode
      *
      * @return bool
@@ -106,6 +100,7 @@ final class Config
      *
      * @param string $section
      *            config section name
+     *
      * @return array
      */
     public static function getAll(string $section): array
@@ -118,12 +113,13 @@ final class Config
     }
 
     /**
-     * Get a configuratin option
+     * Get a configuration option
      *
      * @param string $section
      *            config section name
      * @param string $option
      *            config option in section
+     *
      * @return mixed|null
      */
     public static function get(string $section, string $option): mixed
@@ -132,9 +128,34 @@ final class Config
         if (isset($config[$option])) {
             return $config[$option];
         }
-        // throw new InvalidConfigException(
-        // sprintf('Missing configuration option "%s" in section "%s".', $option, $section));
+        // throw new InvalidConfigException(sprintf('Missing configuration option "%s" in section "%s".', $option, $section));
         return null;
+    }
+
+    /**
+     * Use getEnvironment() instead
+     *
+     * @return string|null
+     * @deprecated
+     */
+    public static function environment(): ?string
+    {
+        return self::$environment;
+    }
+
+    /**
+     * Get environment name
+     *
+     * @return string|null
+     */
+    public static function getEnvironment(): ?string
+    {
+        return self::$environment;
+    }
+
+    public static function getProjectDir(): string
+    {
+        return self::$projectDir;
     }
 
     private static function setConfigByPath(string $configPath, string $environment): void

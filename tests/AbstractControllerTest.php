@@ -6,6 +6,8 @@ namespace Mvc4us\Tests;
 
 use Mvc4us\Controller\AbstractController;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class AbstractControllerTest extends TestCase
 {
@@ -21,9 +23,9 @@ class AbstractControllerTest extends TestCase
                 return $this;
             }
 
-            public function handle(\Symfony\Component\HttpFoundation\Request $request
-            ): \Symfony\Component\HttpFoundation\Response {
-                return new  \Symfony\Component\HttpFoundation\Response("hello testing");
+            public function handle(Request $request
+            ): Response {
+                return new  Response("hello testing");
             }
         };
     }

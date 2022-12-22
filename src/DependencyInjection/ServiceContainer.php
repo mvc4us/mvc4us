@@ -7,9 +7,12 @@ namespace Mvc4us\DependencyInjection;
 use Mvc4us\DependencyInjection\Loader\RouteServiceLoader;
 use Mvc4us\DependencyInjection\Loader\SerializerServiceLoader;
 use Mvc4us\DependencyInjection\Loader\TwigServiceLoader;
+use Mvc4us\Logger\LoggerConfig;
 use Mvc4us\MiddleWare\AfterControllerInterface;
 use Mvc4us\MiddleWare\BeforeControllerInterface;
 use Mvc4us\MiddleWare\BeforeMatcherInterface;
+use Mvc4us\MiddleWare\MiddlewareConstants;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -39,13 +42,13 @@ final class ServiceContainer
         $serviceLoader = new PhpFileLoader($container, $serviceLocator);
 
         $container->registerForAutoconfiguration(BeforeMatcherInterface::class)
-            ->addTag('app_before_matcher')
+            ->addTag(MiddlewareConstants::BEFORE_MATCHER)
             ->setPublic(true);
         $container->registerForAutoconfiguration(BeforeControllerInterface::class)
-            ->addTag('app_before')
+            ->addTag(MiddlewareConstants::BEFORE_CONTROLLER)
             ->setPublic(true);
         $container->registerForAutoconfiguration(AfterControllerInterface::class)
-            ->addTag('app_after')
+            ->addTag(MiddlewareConstants::AFTER_CONTROLLER)
             ->setPublic(true);
         try {
             $serviceLoader->load('services.php');
@@ -53,15 +56,17 @@ final class ServiceContainer
             $definition = new Definition();
             $definition->setAutowired(true)->setAutoconfigured(true)->setPublic(true);
             $serviceLoader->registerClasses($definition, 'App\\', $projectDir . '/src/*');
-            error_log(
+            LoggerConfig::getInstance()->notice(
                 "File '/config/services.php' not found. All container objects defined as public 'App\\' => '$projectDir/src/*'."
             );
         } catch (\Exception $e) {
-            error_log('Unexpected exception. ' . $e);
+            LoggerConfig::getInstance()->error('Unexpected exception. ' . $e);
         }
 
         $container->register(RequestStack::class);
         $container->setAlias('request_stack', RequestStack::class)->setPublic(true);
+        $container->register(LoggerInterface::class)->setFactory([LoggerConfig::class, 'getInstance']);
+        $container->setAlias('logger', LoggerInterface::class)->setPublic(true);
 
         RouteServiceLoader::load($container, $projectDir);
         TwigServiceLoader::load($container, $projectDir);
