@@ -10,7 +10,7 @@ use Mvc4us\Controller\Exception\CircularForwardException;
 use Mvc4us\DependencyInjection\ServiceContainer;
 use Mvc4us\Logger\LoggerConfig;
 use Mvc4us\MiddleWare\Exception\MiddlewareException;
-use Mvc4us\MiddleWare\MiddlewareConstants;
+use Mvc4us\MiddleWare\MiddlewareInterface;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
@@ -91,18 +91,9 @@ class Mvc4us
             //TODO: try to implement a matcher for command
             if ($runMode === self::RUN_WEB) {
                 try {
-                    $beforeMatcherMiddlewares = $this->container->findTaggedServiceIds(
-                        MiddlewareConstants::BEFORE_MATCHER
-                    );
-                    foreach ($beforeMatcherMiddlewares as $id => $tags) {
-                        /**
-                         * @var \Mvc4us\MiddleWare\BeforeMatcherInterface $beforeMatcherMiddleware
-                         */
-                        $beforeMatcherMiddleware = $this->container->get($id);
-                        if (method_exists($beforeMatcherMiddleware, 'setContainer')) {
-                            $beforeMatcherMiddleware->setContainer($this->container);
-                        }
-                        $response = $beforeMatcherMiddleware->processBeforeMatcher($requestStack);
+                    $middlewares = $this->getMiddlewares(MiddlewareInterface::BEFORE_MATCHER);
+                    foreach ($middlewares as $middleware) {
+                        $response = $middleware->processBeforeMatcher($requestStack);
                         if ($response !== null) {
                             goto skipController;
                         }
@@ -152,16 +143,9 @@ class Mvc4us
             }
 
             try {
-                $beforeMiddlewares = $this->container->findTaggedServiceIds(MiddlewareConstants::BEFORE_CONTROLLER);
-                foreach ($beforeMiddlewares as $id => $tags) {
-                    /**
-                     * @var \Mvc4us\MiddleWare\BeforeControllerInterface $beforeMiddleware
-                     */
-                    $beforeMiddleware = $this->container->get($id);
-                    if (method_exists($beforeMiddleware, 'setContainer')) {
-                        $beforeMiddleware->setContainer($this->container);
-                    }
-                    $response = $beforeMiddleware->processBefore($requestStack);
+                $middlewares = $this->getMiddlewares(MiddlewareInterface::BEFORE_CONTROLLER);
+                foreach ($middlewares as $middleware) {
+                    $response = $middleware->processBefore($requestStack);
                     if ($response !== null) {
                         goto skipController;
                     }
@@ -226,16 +210,9 @@ class Mvc4us
         $response->prepare($request);
 
         try {
-            $afterMiddlewares = $this->container->findTaggedServiceIds(MiddlewareConstants::AFTER_CONTROLLER);
-            foreach ($afterMiddlewares as $id => $tags) {
-                /**
-                 * @var \Mvc4us\MiddleWare\AfterControllerInterface $afterMiddleware
-                 */
-                $afterMiddleware = $this->container->get($id);
-                if (method_exists($afterMiddleware, 'setContainer')) {
-                    $afterMiddleware->setContainer($this->container);
-                }
-                if (!$afterMiddleware->processAfter($requestStack, $response)) {
+            $middlewares = $this->getMiddlewares(MiddlewareInterface::AFTER_CONTROLLER);
+            foreach ($middlewares as $middleware) {
+                if (!$middleware->processAfter($requestStack, $response)) {
                     break;
                 }
             }
@@ -247,5 +224,29 @@ class Mvc4us
             $requestStack->pop();
         }
         return $response;
+    }
+
+    /**
+     * @param string $tag
+     * @return \Mvc4us\MiddleWare\BeforeMatcherInterface[]|\Mvc4us\MiddleWare\BeforeControllerInterface[]|\Mvc4us\MiddleWare\AfterControllerInterface[]
+     */
+    private function getMiddlewares(string $tag): array
+    {
+        $middlewares = [];
+        $ids = $this->container->findTaggedServiceIds($tag);
+        foreach (array_keys($ids) as $id) {
+            /**
+             * @var \Mvc4us\MiddleWare\MiddlewareInterface $middleware
+             */
+            $middleware = $this->container->get($id);
+            if (method_exists($middleware, 'setContainer')) {
+                $middleware->setContainer($this->container);
+            }
+            $middlewares[] = $middleware;
+        }
+        usort($middlewares, function (MiddlewareInterface $a, MiddlewareInterface $b) {
+            return $b->getPriority() <=> $a->getPriority();
+        });
+        return $middlewares;
     }
 }

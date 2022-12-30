@@ -33,4 +33,9 @@ trait MiddlewareTrait
         }
         return $router;
     }
+
+    public function getPriority(): int
+    {
+        return 0;
+    }
 }

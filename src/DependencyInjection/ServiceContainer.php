@@ -11,7 +11,7 @@ use Mvc4us\Logger\LoggerConfig;
 use Mvc4us\MiddleWare\AfterControllerInterface;
 use Mvc4us\MiddleWare\BeforeControllerInterface;
 use Mvc4us\MiddleWare\BeforeMatcherInterface;
-use Mvc4us\MiddleWare\MiddlewareConstants;
+use Mvc4us\MiddleWare\MiddlewareInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
 use Symfony\Component\Config\FileLocator;
@@ -42,13 +42,13 @@ final class ServiceContainer
         $serviceLoader = new PhpFileLoader($container, $serviceLocator);
 
         $container->registerForAutoconfiguration(BeforeMatcherInterface::class)
-            ->addTag(MiddlewareConstants::BEFORE_MATCHER)
+            ->addTag(MiddlewareInterface::BEFORE_MATCHER)
             ->setPublic(true);
         $container->registerForAutoconfiguration(BeforeControllerInterface::class)
-            ->addTag(MiddlewareConstants::BEFORE_CONTROLLER)
+            ->addTag(MiddlewareInterface::BEFORE_CONTROLLER)
             ->setPublic(true);
         $container->registerForAutoconfiguration(AfterControllerInterface::class)
-            ->addTag(MiddlewareConstants::AFTER_CONTROLLER)
+            ->addTag(MiddlewareInterface::AFTER_CONTROLLER)
             ->setPublic(true);
         try {
             $serviceLoader->load('services.php');

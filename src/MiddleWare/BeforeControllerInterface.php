@@ -6,13 +6,13 @@ namespace Mvc4us\MiddleWare;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 
-interface BeforeControllerInterface
+interface BeforeControllerInterface extends MiddlewareInterface
 {
     /**
-     * * MIDDLEWARES MUST NOT THROW EXCEPTION.
-     * * If this returns null regular flow will continue.
-     * * If this returns a \Symfony\Component\HttpFoundation\Response instance, all remaining middlewares and
-     * the controller will be skipped then the response will be processed.
+     * MIDDLEWARES MUST NOT THROW EXCEPTION.
+     * If this returns null regular flow will continue.
+     * If this returns a \Symfony\Component\HttpFoundation\Response flow will end immediately and response will be
+     * return to client.
      *
      * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
      * @return \Symfony\Component\HttpFoundation\Response|null
