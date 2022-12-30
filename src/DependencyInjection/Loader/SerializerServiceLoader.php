@@ -9,6 +9,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Mapping\ClassDiscriminatorFromClassMetadata;
 use Symfony\Component\Serializer\Mapping\Factory\ClassMetadataFactory;
 use Symfony\Component\Serializer\Mapping\Loader\AnnotationLoader;
 use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
@@ -34,12 +35,14 @@ final class SerializerServiceLoader
 
         $defaultContext = [];
         $classMetadataFactory = new ClassMetadataFactory(new AnnotationLoader(new AnnotationReader()));
+        $discriminator = new ClassDiscriminatorFromClassMetadata($classMetadataFactory);
         $normalizers = [
             new DateTimeNormalizer(),
             new ArrayDenormalizer(),
             new ObjectNormalizer(
                 classMetadataFactory: $classMetadataFactory,
                 propertyTypeExtractor: new ReflectionExtractor(),
+                classDiscriminatorResolver: $discriminator,
                 defaultContext: $defaultContext
             ),
         ];
