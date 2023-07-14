@@ -9,15 +9,12 @@ use Yosymfony\Toml\Toml;
 
 final class Config
 {
-
     private static ?string $environment = null;
 
-    private static string $projectDir = "";
+    private static string $projectPath = "";
 
     private static array $config = [
-        'app' => [
-            'debug' => false
-        ]
+        'debug' => false
     ];
 
     /**
@@ -27,61 +24,39 @@ final class Config
     {
     }
 
-    public static function load(string $projectDir, ?string $environment = null): void
+    public static function load(string $projectPath, ?string $environment = null): void
     {
-        self::$projectDir = $projectDir;
+        self::$projectPath = $projectPath;
+        $basePath = self::$projectPath . DIRECTORY_SEPARATOR . 'config';
+        $envConfig = self::getConfigByPath($basePath . DIRECTORY_SEPARATOR . 'env.toml');
+        self::$config = ArrayUtils::merge(self::$config, $envConfig);
+        unset(self::$config['env'], self::$config['alias']);
+        $environment = $environment ?? $_ENV['MVC4US_ENV'] ?? $_SERVER['MVC4US_ENV'] ?? self::getArgvEnv()
+            ?? self::getHostEnv() ?? $envConfig['env'] ?? null;
 
         if (empty($environment)) {
-            if (self::$environment !== null) {
-                $environment = self::$environment;
-            } elseif (isset($_ENV['MVC4US_ENV'])) {
-                $environment = $_ENV['MVC4US_ENV'];
-            } elseif (isset($_SERVER['MVC4US_ENV'])) {
-                $environment = $_SERVER['MVC4US_ENV'];
-            } elseif (isset($_SERVER['HTTP_HOST']) && isset($_SERVER['SERVER_PORT'])) {
-                $environment = $_SERVER['HTTP_HOST'] . ':' . $_SERVER['SERVER_PORT'];
-            }
-            if (empty($environment)) {
-                // throw new InvalidConfigException('Unable to determine environment');
-                return;
-            }
+            return;
         }
+
         self::$environment = $environment;
-
-        $configPath = self::$projectDir . '/config';
-        if (is_dir($configPath . DIRECTORY_SEPARATOR . $environment)) {
-            self::setConfigByPath($configPath, $environment);
-            return;
-        }
-
-        $envFile = $configPath . '/env.toml';
-        if (!is_file($envFile)) {
-            return;
-        }
-        $envList = Toml::parseFile($envFile);
-        if (empty($envList)) {
-            // throw new InvalidConfigException('No environment is defined in "env.toml".');
-            return;
-        }
-
-        $envSelector = $environment;
-        if (isset($envList[$envSelector])) {
-            $environment = $envList[$envSelector];
-        } else {
-            foreach ($envList as $key => $value) {
-                if (fnmatch($key, $envSelector)) {
+        $configPath = $basePath . DIRECTORY_SEPARATOR . $environment;
+        if (!is_dir($configPath)) {
+            $environment = null;
+            foreach ($envConfig['alias'] ?? [] as $key => $value) {
+                if (fnmatch($key, self::$environment)) {
                     $environment = $value;
                     break;
                 }
             }
+            if (empty($environment)) {
+                return;
+            }
+            self::$environment = $environment;
+            $configPath = $basePath . DIRECTORY_SEPARATOR . $environment;
         }
-        if (empty($environment)) {
-            return;
-        }
-        self::$environment = $environment;
-
-        if (is_dir($configPath . DIRECTORY_SEPARATOR . $environment)) {
-            self::setConfigByPath($configPath, $environment);
+        if (is_dir($configPath)) {
+            $config = self::getConfigByPath($configPath . DIRECTORY_SEPARATOR . '*.toml');
+            self::$config = ArrayUtils::merge(self::$config, $config);
         }
     }
 
@@ -92,7 +67,7 @@ final class Config
      */
     public static function isDebug(): bool
     {
-        return self::get('app', 'debug') === true;
+        return self::$config['debug'] ?? false;
     }
 
     /**
@@ -100,12 +75,11 @@ final class Config
      *
      * @param string $section
      *            config section name
-     *
      * @return array
      */
     public static function getAll(string $section): array
     {
-        if (isset(self::$config[$section])) {
+        if (isset(self::$config[$section]) && is_array(self::$config[$section])) {
             return self::$config[$section];
         }
         // throw new InvalidConfigException(sprintf('Missing configuration section "%s".', $section));
@@ -113,13 +87,12 @@ final class Config
     }
 
     /**
-     * Get a configuration option
+     * Get a configuration option or null if option not found
      *
      * @param string $section
      *            config section name
      * @param string $option
      *            config option in section
-     *
      * @return mixed|null
      */
     public static function get(string $section, string $option): mixed
@@ -153,9 +126,21 @@ final class Config
         return self::$environment;
     }
 
-    public static function getProjectDir(): string
+    public static function getProjectPath(): string
     {
-        return self::$projectDir;
+        return self::$projectPath;
+    }
+
+    private static function getConfigByPath(string $configPath): array
+    {
+        $config = [];
+        foreach (glob($configPath) as $configFile) {
+            $conf = Toml::parseFile($configFile);
+            if (is_array($conf)) {
+                $config = ArrayUtils::merge($config, $conf);
+            }
+        }
+        return $config;
     }
 
     private static function setConfigByPath(string $configPath, string $environment): void
@@ -164,12 +149,34 @@ final class Config
         foreach (glob($configPath . DIRECTORY_SEPARATOR . $environment . '/*.toml') as $configFile) {
             $conf = Toml::parseFile($configFile);
             if (is_array($conf)) {
-                $config = ArrayUtils::mergeRecursive($config, $conf);
+                $config = ArrayUtils::merge($config, $conf);
             }
             // throw new InvalidConfigException(sprintf('Error loading config file "%s".', $configFile));
         }
 
-        self::$config = ArrayUtils::mergeRecursive(self::$config, $config);
+        self::$config = ArrayUtils::merge(self::$config, $config);
         self::$environment = $environment;
+    }
+
+    private static function getArgvEnv(): ?string
+    {
+        foreach ($_SERVER['argv'] ?? [] as $i => $item) {
+            if (!str_contains($item, '=')) {
+                continue;
+            }
+            [$key, $value] = explode('=', $item);
+            if ($key === '--env') {
+                unset($_SERVER['argv'][$i]);
+                $_SERVER['argc'] -= 1;
+                return $value;
+            }
+        }
+        return null;
+    }
+
+    private static function getHostEnv(): ?string
+    {
+        return isset($_SERVER['HTTP_HOST']) && isset($_SERVER['SERVER_PORT'])
+            ? $_SERVER['HTTP_HOST'] . ':' . $_SERVER['SERVER_PORT'] : null;
     }
 }

@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Mvc4us;
 
+use Monolog\Logger;
 use Mvc4us\Config\Config;
+use Mvc4us\Controller\Command\CommandResponse;
 use Mvc4us\Controller\ControllerInterface;
 use Mvc4us\Controller\Exception\CircularForwardException;
 use Mvc4us\DependencyInjection\ServiceContainer;
+use Mvc4us\Logger\AdhocLogger;
 use Mvc4us\Logger\LoggerConfig;
 use Mvc4us\MiddleWare\Exception\MiddlewareException;
 use Mvc4us\MiddleWare\MiddlewareInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
@@ -27,39 +31,38 @@ use Symfony\Component\Routing\RequestContext;
  */
 class Mvc4us
 {
-
     public const RUN_CMD = 1;
-
     public const RUN_WEB = 2;
 
     private ?TaggedContainerInterface $container = null;
 
-    private string $projectDir;
-
-    public function __construct(string $projectDir, ?string $environment = null)
-    {
-        $this->projectDir = $projectDir;
-        $this->reload($environment);
+    public function __construct(
+        private readonly string $projectPath,
+        private readonly string $appName = 'app',
+        private readonly ?string $environment = null
+    ) {
+        $this->reload();
     }
 
-    public function reload(?string $environment = null): void
+    public function reload(): void
     {
-        Config::load($this->projectDir, $environment);
-
-        $this->container = ServiceContainer::load($this->projectDir);
+        Config::load($this->projectPath, $this->environment);
+        LoggerConfig::load($this->projectPath, $this->appName);
+        $this->container = ServiceContainer::load($this->projectPath);
     }
 
-    public function runCmd(string $controllerName, ?Request $request = null, bool $echo = false): ?string
+    /**
+     * @deprecated
+     */
+    public function getLogger(): LoggerInterface|AdhocLogger|Logger
     {
-        $request = $request ?? new Request($_SERVER['argv']);
-        $request->setMethod('CLI');
-        $response = $this->run($controllerName, $request, self::RUN_CMD);
-        if ($echo) {
-            echo $response->getContent() . PHP_EOL;
-        }
-        return $response->getContent();
+        return LoggerConfig::getInstance();
     }
 
+    /**
+     * @param \Symfony\Component\HttpFoundation\Request|null $request
+     * @return \Symfony\Component\HttpFoundation\Response|null
+     */
     public function runWeb(?Request $request = null): ?Response
     {
         $request = $request ?? Request::createFromGlobals();
@@ -69,6 +72,24 @@ class Mvc4us
         }
         $response->send();
         return null;
+    }
+
+    /**
+     * @param string $commandName
+     * @param \Symfony\Component\HttpFoundation\Request|null $request
+     * @param bool $return
+     * @return \Mvc4us\Controller\Command\CommandResponse|null
+     */
+    public function runCmd(string $commandName, ?Request $request = null, bool $return = false): ?CommandResponse
+    {
+        $request = $request ?? new Request($_SERVER['argv']);
+        $request->setMethod('CLI');
+        $response = CommandResponse::fromResponse($this->run($commandName, $request, self::RUN_CMD));
+        if ($return) {
+            return $response;
+        }
+        echo $response->getContent();
+        exit($response->getExitCode() ?? 0);
     }
 
     private function run(?string $controllerName, Request $request, int $runMode): ?Response
@@ -91,8 +112,7 @@ class Mvc4us
             //TODO: try to implement a matcher for command
             if ($runMode === self::RUN_WEB) {
                 try {
-                    $middlewares = $this->getMiddlewares(MiddlewareInterface::BEFORE_MATCHER);
-                    foreach ($middlewares as $middleware) {
+                    foreach ($this->getBeforeMatcherMiddlewares() as $middleware) {
                         $response = $middleware->processBeforeMatcher($requestStack);
                         if ($response !== null) {
                             goto skipController;
@@ -143,8 +163,7 @@ class Mvc4us
             }
 
             try {
-                $middlewares = $this->getMiddlewares(MiddlewareInterface::BEFORE_CONTROLLER);
-                foreach ($middlewares as $middleware) {
+                foreach ($this->getBeforeControllerMiddlewares() as $middleware) {
                     $response = $middleware->processBefore($requestStack);
                     if ($response !== null) {
                         goto skipController;
@@ -210,7 +229,7 @@ class Mvc4us
         $response->prepare($request);
 
         try {
-            $middlewares = $this->getMiddlewares(MiddlewareInterface::AFTER_CONTROLLER);
+            $middlewares = $this->getAfterControllerMiddlewares();
             foreach ($middlewares as $middleware) {
                 if (!$middleware->processAfter($requestStack, $response)) {
                     break;
@@ -227,9 +246,29 @@ class Mvc4us
     }
 
     /**
-     * @param string $tag
-     * @return \Mvc4us\MiddleWare\BeforeMatcherInterface[]|\Mvc4us\MiddleWare\BeforeControllerInterface[]|\Mvc4us\MiddleWare\AfterControllerInterface[]
+     * @return \Mvc4us\MiddleWare\BeforeMatcherInterface[]
      */
+    private function getBeforeMatcherMiddlewares(): array
+    {
+        return $this->getMiddlewares(MiddlewareInterface::BEFORE_MATCHER);
+    }
+
+    /**
+     * @return \Mvc4us\MiddleWare\BeforeControllerInterface[]
+     */
+    private function getBeforeControllerMiddlewares(): array
+    {
+        return $this->getMiddlewares(MiddlewareInterface::BEFORE_CONTROLLER);
+    }
+
+    /**
+     * @return \Mvc4us\MiddleWare\AfterControllerInterface[]
+     */
+    private function getAfterControllerMiddlewares(): array
+    {
+        return $this->getMiddlewares(MiddlewareInterface::AFTER_CONTROLLER);
+    }
+
     private function getMiddlewares(string $tag): array
     {
         $middlewares = [];

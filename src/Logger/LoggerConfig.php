@@ -13,28 +13,28 @@ use Mvc4us\Config\Config;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
+/**
+ * @internal
+ */
 class LoggerConfig
 {
-    static private LoggerInterface $logger;
+    private static LoggerInterface $instance;
 
-    public static function getInstance(): LoggerInterface
+    public static function load(string $projectPath, string $name): void
     {
-        if (isset(self::$logger)) {
-            return self::$logger;
+        if (!class_exists('Monolog\Logger')) {
+            self::$instance = new AdhocLogger();
+            return;
         }
-        if (!class_exists('Monolog\\Logger')) {
-            self::$logger = new AdhocLogger();
-            return self::$logger;
-        }
-        self::$logger = new Logger('app');
-        self::$logger
+        self::$instance = (new Logger($name))->useMicrosecondTimestamps(Config::get('log', 'useMicrosecond') ?? true);
+        self::$instance
             ->pushHandler(
                 (new StreamHandler(
-                    APP_DIR . '/var/log/app.log',
+                    $projectPath . '/var/log/app.log',
                     Config::get('log', 'level') ?? LogLevel::NOTICE
                 ))->setFormatter(
                     (new LineFormatter(
-                        format: "[%datetime%] %channel%.%level_name%: %message%\n %context% %extra%\n",
+                        format: "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
                         ignoreEmptyContextAndExtra: true
                     ))->includeStacktraces(true, function ($line) {
                         return preg_replace(
@@ -46,32 +46,38 @@ class LoggerConfig
                 )
             )
             ->pushProcessor(callback: function (LogRecord $record) {
+                $nl = (!empty($record->context) || !empty($record->extra)) ? "\n" : "";
                 if (isset($record->context['exception'])) {
-                    $context = $record->context;
-                    $e = $context['exception'];
+                    $e = $record->context['exception'];
                     //unset($context['exception']);
                     $message = sprintf(
-                        'Uncaught Exception %s: "%s" in %s on line %s',
-                        Utils::getClass($e),
+                        '%s: "%s" in %s on line %s%s',
+                        ($record->message ? $record->message . "\n" : '') . Utils::getClass($e),
                         $e->getMessage(),
                         $e->getFile(),
-                        $e->getLine()
+                        $e->getLine(),
+                        $nl
                     );
-                    return new LogRecord(
-                        datetime: $record->datetime,
-                        channel: $record->channel,
-                        level: $record->level,
-                        message: $message,
-                        context: $context,
-                        extra: $record->extra,
-                        formatted: $record->formatted
-                    );
+                } else {
+                    $message = sprintf("%s%s", $record->message, $nl);
                 }
-                return $record;
+                return new LogRecord(
+                    datetime: $record->datetime,
+                    channel: $record->channel,
+                    level: $record->level,
+                    message: $message,
+                    context: $record->context,
+                    extra: $record->extra,
+                    formatted: $record->formatted
+                );
             });
         if (Config::get('log', 'registerErrors') ?? false) {
-            ErrorHandler::register(self::$logger);
+            ErrorHandler::register(self::$instance);
         }
-        return self::$logger;
+    }
+
+    public static function getInstance(): LoggerInterface
+    {
+        return self::$instance;
     }
 }

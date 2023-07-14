@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Mvc4us\DependencyInjection\Loader;
+namespace Mvc4us\Routing;
 
-use Mvc4us\Routing\AnnotatedRouteLoader;
-use Mvc4us\Routing\NonRedirectingCompiledUrlMatcher;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\DelegatingLoader;
 use Symfony\Component\Config\Loader\LoaderResolver;
@@ -31,7 +29,7 @@ final class RouteServiceLoader
         $resolver->addLoader(new AnnotationDirectoryLoader(new FileLocator(), new AnnotatedRouteLoader()));
         $routeLoader = new DelegatingLoader($resolver);
 
-        // TODO: Make redirection configurable
+        // TODO: Implement configurable redirection
         $container->register(Router::class)
             ->setArgument('$loader', $routeLoader)
             ->setArgument('$resource', 'routes.php')

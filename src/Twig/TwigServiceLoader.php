@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Mvc4us\DependencyInjection\Loader;
+namespace Mvc4us\Twig;
 
 use Mvc4us\Config\Config;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -20,7 +20,7 @@ final class TwigServiceLoader
 
     public static function load(ContainerBuilder $container, string $projectDir): void
     {
-        if (!class_exists('Twig\\Environment')) {
+        if (!class_exists('Twig\Environment')) {
             return;
         }
 
@@ -39,9 +39,9 @@ final class TwigServiceLoader
         }
         $loader = new FilesystemLoader($templateDir);
 
-        $container->register('twig', Environment::class)
+        $container->register(Environment::class)
             ->setArgument('$loader', $loader)
-            ->setArgument('$options', $options)
-            ->setPublic(true);
+            ->setArgument('$options', $options);
+        $container->setAlias('twig', Environment::class)->setPublic(true);
     }
 }

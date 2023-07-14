@@ -15,25 +15,20 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\Router;
-use Symfony\Component\Serializer\Encoder\JsonEncode;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 /**
  * @author erdem
  */
 abstract class AbstractController implements ControllerInterface
 {
-
     private ?TaggedContainerInterface $container = null;
 
     private static array $callStack = [];
 
-    /**
-     * @param \Symfony\Component\DependencyInjection\TaggedContainerInterface $container
-     */
-    public function setContainer(TaggedContainerInterface $container): void
+    public function setContainer(TaggedContainerInterface $container): self
     {
         $this->container = $this->container ?? $container;
+        return $this;
     }
 
     /**
@@ -61,11 +56,7 @@ abstract class AbstractController implements ControllerInterface
      */
     protected function getRouter(): ?Router
     {
-        $router = $this->container->get('router');
-        if (!$router instanceof Router) {
-            return null;
-        }
-        return $router;
+        return $this->container->get('router');
     }
 
     /**
@@ -76,17 +67,11 @@ abstract class AbstractController implements ControllerInterface
      */
     protected function getController(string $controllerName): ?AbstractController
     {
-        $controller = $this->container->get($controllerName);
-        if (!$controller instanceof AbstractController) {
-            return null;
-        }
-        $controller->setContainer($this->container);
-        return $controller;
+        return $this->container->get($controllerName)?->setContainer($this->container);
     }
 
     /**
      * Generates a URL from the given parameters.
-     * TODO
      *
      * @see \Symfony\Component\Routing\Generator\UrlGeneratorInterface
      */
@@ -110,9 +95,9 @@ abstract class AbstractController implements ControllerInterface
     {
         self::$callStack[static::class] = (self::$callStack[static::class] ?? 0) + 1;
 
-        $maxStack = Config::get('app', 'controller_forward_limit') ?? 0;
+        $maxStack = Config::get('app', 'controller_forward_limit') ?? 10;
         if ((self::$callStack[$controllerName] ?? 0) > $maxStack) {
-            throw new CircularForwardException('Infinite forward loop.');
+            throw new CircularForwardException(sprintf('Maximum forward recursion of %d reached.', $maxStack));
         }
         $response = $this->getController($controllerName)->handle($request->duplicate());
         self::$callStack[static::class]--;
@@ -169,15 +154,7 @@ abstract class AbstractController implements ControllerInterface
                 'Serializer not found. Try running "composer require symfony/serializer".'
             );
         }
-        return $this->container->get('serializer')->deserialize(
-            $json,
-            is_object($object) ? get_class($object) : $object,
-            'json',
-            array_merge_recursive(
-                [AbstractNormalizer::OBJECT_TO_POPULATE => is_object($object) ? $object : null],
-                $context
-            )
-        );
+        return $this->container->get('serializer')->parseJson($json, $object, $context);
     }
 
     /**
@@ -194,15 +171,7 @@ abstract class AbstractController implements ControllerInterface
         if (!$this->container->has('serializer')) {
             return new JsonResponse($data, $status, $headers);
         }
-        $json = $this->container->get('serializer')->serialize(
-            $data,
-            'json',
-            array_merge([
-                JsonEncode::OPTIONS => JsonResponse::DEFAULT_ENCODING_OPTIONS
-            ], $context)
-        );
-
-        return new JsonResponse($json, $status, $headers, true);
+        return new JsonResponse($this->container->get('serializer')->json($data, $context), $status, $headers, true);
     }
 
     /**

@@ -3,54 +3,15 @@ declare(strict_types=1);
 
 namespace Mvc4us\Logger;
 
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
+use Psr\Log\AbstractLogger;
 
-class AdhocLogger implements LoggerInterface
+/**
+ * @internal
+ */
+class AdhocLogger extends AbstractLogger
 {
-
-    public function emergency(\Stringable|string $message, array $context = []): void
+    public function log(mixed $level, string|\Stringable $message, array $context = []): void
     {
-        $this->log(LogLevel::EMERGENCY, $message);
-    }
-
-    public function alert(\Stringable|string $message, array $context = []): void
-    {
-        $this->log(LogLevel::ALERT, $message);
-    }
-
-    public function critical(\Stringable|string $message, array $context = []): void
-    {
-        $this->log(LogLevel::CRITICAL, $message);
-    }
-
-    public function error(\Stringable|string $message, array $context = []): void
-    {
-        $this->log(LogLevel::ERROR, $message);
-    }
-
-    public function warning(\Stringable|string $message, array $context = []): void
-    {
-        $this->log(LogLevel::WARNING, $message);
-    }
-
-    public function notice(\Stringable|string $message, array $context = []): void
-    {
-        $this->log(LogLevel::NOTICE, $message);
-    }
-
-    public function info(\Stringable|string $message, array $context = []): void
-    {
-        $this->log(LogLevel::INFO, $message);
-    }
-
-    public function debug(\Stringable|string $message, array $context = []): void
-    {
-        $this->log(LogLevel::DEBUG, $message);
-    }
-
-    public function log($level, \Stringable|string $message, array $context = []): void
-    {
-        error_log('[' . date('Y-m-d H:i:s') . '] ' . '[' . $level . '] ' . $message);
+        error_log(sprintf('[%s] adhoc.%s: %s', date('Y-m-d H:i:s'), strtoupper($level), $message));
     }
 }

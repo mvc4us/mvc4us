@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Mvc4us\DependencyInjection;
 
-use Mvc4us\DependencyInjection\Loader\RouteServiceLoader;
-use Mvc4us\DependencyInjection\Loader\SerializerServiceLoader;
-use Mvc4us\DependencyInjection\Loader\TwigServiceLoader;
 use Mvc4us\Logger\LoggerConfig;
+use Mvc4us\Logger\LoggerServiceLoader;
 use Mvc4us\MiddleWare\AfterControllerInterface;
 use Mvc4us\MiddleWare\BeforeControllerInterface;
 use Mvc4us\MiddleWare\BeforeMatcherInterface;
 use Mvc4us\MiddleWare\MiddlewareInterface;
-use Psr\Log\LoggerInterface;
+use Mvc4us\Routing\RouteServiceLoader;
+use Mvc4us\Serializer\SerializerServiceLoader;
+use Mvc4us\Twig\TwigServiceLoader;
 use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -27,7 +27,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
  */
 final class ServiceContainer
 {
-
     /**
      * This class should not be instantiated.
      */
@@ -35,10 +34,10 @@ final class ServiceContainer
     {
     }
 
-    public static function load($projectDir): TaggedContainerInterface
+    public static function load($projectPath): TaggedContainerInterface
     {
         $container = new ContainerBuilder();
-        $serviceLocator = new FileLocator($projectDir . '/config');
+        $serviceLocator = new FileLocator($projectPath . '/config');
         $serviceLoader = new PhpFileLoader($container, $serviceLocator);
 
         $container->registerForAutoconfiguration(BeforeMatcherInterface::class)
@@ -55,9 +54,9 @@ final class ServiceContainer
         } catch (FileLocatorFileNotFoundException) {
             $definition = new Definition();
             $definition->setAutowired(true)->setAutoconfigured(true)->setPublic(true);
-            $serviceLoader->registerClasses($definition, 'App\\', $projectDir . '/src/*');
+            $serviceLoader->registerClasses($definition, 'App\\', $projectPath . '/src/*');
             LoggerConfig::getInstance()->notice(
-                "File '/config/services.php' not found. All container objects defined as public 'App\\' => '$projectDir/src/*'."
+                "File '/config/services.php' not found. All container objects defined as public 'App\\' => '$projectPath/src/*'."
             );
         } catch (\Exception $e) {
             LoggerConfig::getInstance()->error('Unexpected exception. ' . $e);
@@ -65,11 +64,10 @@ final class ServiceContainer
 
         $container->register(RequestStack::class);
         $container->setAlias('request_stack', RequestStack::class)->setPublic(true);
-        $container->register(LoggerInterface::class)->setFactory([LoggerConfig::class, 'getInstance']);
-        $container->setAlias('logger', LoggerInterface::class)->setPublic(true);
 
-        RouteServiceLoader::load($container, $projectDir);
-        TwigServiceLoader::load($container, $projectDir);
+        LoggerServiceLoader::load($container);
+        RouteServiceLoader::load($container, $projectPath);
+        TwigServiceLoader::load($container, $projectPath);
         SerializerServiceLoader::load($container);
 
         $container->compile();
