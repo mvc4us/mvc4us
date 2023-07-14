@@ -20,11 +20,11 @@
   "require": {
     "php": ">=8.1",
     "psr/log": "^3.0",
-    "symfony/config": "6.2.*",
-    "symfony/dependency-injection": "6.2.*",
-    "symfony/http-foundation": "6.2.*",
-    "symfony/mime": "6.2.*",
-    "symfony/routing": "6.2.*",
+    "symfony/config": "6.3.*",
+    "symfony/dependency-injection": "6.3.*",
+    "symfony/http-foundation": "6.3.*",
+    "symfony/mime": "6.3.*",
+    "symfony/routing": "6.3.*",
     "yosymfony/toml": "^1.0"
   },
   "require-dev": {
@@ -32,8 +32,8 @@
     "doctrine/annotations": "^1.13",
     "monolog/monolog": "^3.2",
     "phpunit/phpunit": "^9.5",
-    "symfony/property-access": "6.2.*",
-    "symfony/serializer": "6.2.*",
+    "symfony/property-access": "6.3.*",
+    "symfony/serializer": "6.3.*",
     "twig/twig": "^3.0"
   },
   "autoload": {
