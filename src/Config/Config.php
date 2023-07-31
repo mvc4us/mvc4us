@@ -160,14 +160,19 @@ final class Config
 
     private static function getArgvEnv(): ?string
     {
-        foreach ($_SERVER['argv'] ?? [] as $i => $item) {
+        global $argv;
+        global $argc;
+        foreach ($argv ?? [] as $i => $item) {
             if (!str_contains($item, '=')) {
                 continue;
             }
             [$key, $value] = explode('=', $item);
             if ($key === '--env') {
-                unset($_SERVER['argv'][$i]);
-                $_SERVER['argc'] -= 1;
+                unset($argv[$i]);
+                $argv = array_values($argv);
+                $argc = count($argv);
+                $_SERVER['argv'] = $argv;
+                $_SERVER['argc'] = $argc;
                 return $value;
             }
         }
