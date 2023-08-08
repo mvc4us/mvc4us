@@ -28,13 +28,13 @@ class CommandResponse extends Response
         return $this->exitCode;
     }
 
-    public function setExitCode(int $exitCode): void
+    public function setExitCode(int $exitCode): static
     {
         if ($exitCode < 0 || $exitCode > 255) {
             throw new \InvalidArgumentException('Invalid (POSIX) exit code: ' . $exitCode);
         }
-        $this->setStatusCode($exitCode === 0 ? 200 : 500);
         $this->exitCode = $exitCode;
+        return $this->setStatusCode($exitCode === 0 ? 200 : 500);
     }
 
     public function isError(): bool
