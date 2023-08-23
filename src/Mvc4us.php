@@ -82,7 +82,7 @@ class Mvc4us
      */
     public function runCmd(string $commandName, ?Request $request = null, bool $return = false): ?CommandResponse
     {
-        $request = $request ?? new Request($_SERVER['argv']);
+        $request = $request ?? Request::createFromGlobals();
         $request->setMethod('CLI');
         $response = CommandResponse::fromResponse($this->run($commandName, $request, self::RUN_CMD));
         if ($return) {
