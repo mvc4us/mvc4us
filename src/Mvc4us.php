@@ -49,6 +49,9 @@ class Mvc4us
         Config::load($this->projectPath, $this->environment);
         LoggerConfig::load($this->projectPath, $this->appName);
         $this->container = ServiceContainer::load($this->projectPath);
+        if (Config::get('app', 'memory')) {
+            ini_set('memory_limit', Config::get('app', 'memory'));
+        }
     }
 
     /**
