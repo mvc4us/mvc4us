@@ -30,7 +30,7 @@ class LoggerConfig
         self::$instance
             ->pushHandler(
                 (new StreamHandler(
-                    $projectPath . '/var/log/app.log',
+                    $projectPath . '/var/log/' . $name . '.log',
                     Config::get('log', 'level') ?? LogLevel::NOTICE
                 ))->setFormatter(
                     (new LineFormatter(
