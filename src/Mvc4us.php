@@ -68,7 +68,6 @@ class Mvc4us
      */
     public function runWeb(?Request $request = null): ?Response
     {
-        $request = $request ?? Request::createFromGlobals();
         $response = $this->run(null, $request, self::RUN_WEB);
         if (PHP_SAPI === 'cli') {
             return $response;
@@ -85,8 +84,6 @@ class Mvc4us
      */
     public function runCmd(string $commandName, ?Request $request = null, bool $return = false): ?CommandResponse
     {
-        $request = $request ?? Request::createFromGlobals();
-        $request->setMethod('CLI');
         $response = CommandResponse::fromResponse($this->run($commandName, $request, self::RUN_CMD));
         if ($return) {
             return $response;
@@ -95,7 +92,7 @@ class Mvc4us
         exit($response->getExitCode() ?? 0);
     }
 
-    private function run(?string $controllerName, Request $request, int $runMode): ?Response
+    private function run(?string $controllerName, ?Request $request, int $runMode): ?Response
     {
         $e = null;
         if ($this->container === null) {
@@ -105,10 +102,17 @@ class Mvc4us
          * @var \Symfony\Component\HttpFoundation\RequestStack $requestStack
          */
         $requestStack = $this->container->get('request_stack');
-        // TODO: Check if below flag is really needed (when run as memory resident application server).
+        // TODO: Check if below flag is really needed (when run as memory resident application).
         $popRequest = false;
 
         try {
+            $request = $request ?? Request::createFromGlobals();
+            if ($preferredLanguage = $request->getPreferredLanguage()) {
+                $request->setLocale($preferredLanguage);
+            }
+            if ($runMode === self::RUN_CMD) {
+                $request->setMethod('CLI');
+            }
             $request->attributes->set('_runMode', $runMode);
             $requestStack->push($request);
             $popRequest = true;

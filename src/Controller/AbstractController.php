@@ -42,9 +42,9 @@ abstract class AbstractController implements ControllerInterface
     /**
      * Gets a container service by its id.
      *
-     * @return object The service
+     * @return object|null The service
      */
-    protected function get(string $id): object
+    protected function get(string $id): ?object
     {
         return $this->container->get($id);
     }

@@ -45,19 +45,5 @@ final class ArrayUtils
 
         return $merged;
     }
-
-    /**
-     * Use {@see \Mvc4us\Utils\ArrayUtils::merge()} instead
-     *
-     * @param array $array1
-     * @param array $array2
-     * @return array
-     * @deprecated
-     */
-    public static function mergeRecursive(array $array1, array $array2): array
-    {
-
-        return self::merge($array1, $array2);
-    }
 }
 

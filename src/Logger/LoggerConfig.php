@@ -72,7 +72,11 @@ class LoggerConfig
                 );
             });
         if (Config::get('log', 'registerErrors') ?? false) {
-            ErrorHandler::register(self::$instance);
+            //ErrorHandler::register(self::$instance);
+            $handler = new ErrorHandler(self::$instance);
+            $handler->registerErrorHandler(handleOnlyReportedErrors: !Config::isDebug());
+            $handler->registerExceptionHandler();
+            $handler->registerFatalHandler();
         }
     }
 
