@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Mvc4us\Logger;
@@ -8,6 +9,7 @@ use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Monolog\LogRecord;
+use Monolog\Processor\PsrLogMessageProcessor;
 use Monolog\Utils;
 use Mvc4us\Config\Config;
 use Psr\Log\LoggerInterface;
@@ -34,28 +36,27 @@ class LoggerConfig
                     Config::get('log', 'level') ?? LogLevel::NOTICE
                 ))->setFormatter(
                     (new LineFormatter(
-                        format: "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
+                        format: "[%datetime%] %channel%.%level_name%: %message%%context.exception% %extra%" . PHP_EOL,
                         ignoreEmptyContextAndExtra: true
                     ))->includeStacktraces(true, function ($line) {
                         return preg_replace(
                             '/(#[0-9]+) ([^(^)]+)\(([0-9]+)\): (.+)/',
-                            '$1 $4 in $2 on line $3',
+                            //'$1 $4 in $2 on line $3',
+                            '$1 $4 at $2:$3',
                             $line
                         );
                     })
                 )
             )
+            ->pushProcessor(new PsrLogMessageProcessor())
             ->pushProcessor(callback: function (LogRecord $record) {
-                $nl = (!empty($record->context) || !empty($record->extra)) ? "\n" : "";
+                $nl = (!empty($record->context) || !empty($record->extra)) ? PHP_EOL : " ";
                 if (isset($record->context['exception'])) {
                     $e = $record->context['exception'];
                     //unset($context['exception']);
                     $message = sprintf(
-                        '%s: "%s" in %s on line %s%s',
-                        ($record->message ? $record->message . "\n" : '') . Utils::getClass($e),
-                        $e->getMessage(),
-                        $e->getFile(),
-                        $e->getLine(),
+                        '%s%s',
+                        ($record->message ? $record->message . PHP_EOL : '') . Utils::getClass($e),
                         $nl
                     );
                 } else {

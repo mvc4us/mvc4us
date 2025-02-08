@@ -143,21 +143,6 @@ final class Config
         return $config;
     }
 
-    private static function setConfigByPath(string $configPath, string $environment): void
-    {
-        $config = [];
-        foreach (glob($configPath . DIRECTORY_SEPARATOR . $environment . '/*.toml') as $configFile) {
-            $conf = Toml::parseFile($configFile);
-            if (is_array($conf)) {
-                $config = ArrayUtils::merge($config, $conf);
-            }
-            // throw new InvalidConfigException(sprintf('Error loading config file "%s".', $configFile));
-        }
-
-        self::$config = ArrayUtils::merge(self::$config, $config);
-        self::$environment = $environment;
-    }
-
     private static function getArgvEnv(): ?string
     {
         global $argv;
