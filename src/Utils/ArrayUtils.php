@@ -36,10 +36,10 @@ final class ArrayUtils
             if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
                 $value = self::merge($merged[$key], $value);
             }
-            if (is_numeric($key)) {
-                $merged[] = $value;
-            } else {
+            if (is_string($key)) {
                 $merged[$key] = $value;
+            } else {
+                $merged[] = $value;
             }
         }
 
