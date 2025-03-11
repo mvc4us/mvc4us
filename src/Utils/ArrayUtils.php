@@ -33,7 +33,7 @@ final class ArrayUtils
     {
         $merged = array_shift($arrays) ?? [];
 
-        while ($array = array_shift($arrays)) {
+        while (null !== $array = array_shift($arrays)) {
             foreach ($array as $key => $value) {
                 if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
                     $value = self::merge($merged[$key], $value);
