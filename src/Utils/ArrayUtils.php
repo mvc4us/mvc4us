@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mvc4us\Utils;
 
+use Ouzo\Utilities\Arrays;
+
 /**
  * @author erdem
  */
@@ -47,5 +49,47 @@ final class ArrayUtils
         }
         return $merged;
     }
-}
 
+    /**
+     * Wrapper for {@see \Ouzo\Utilities\Arrays::getNestedValue()} to accept dot notation for the path.
+     *
+     * @link https://ouzo.readthedocs.io/en/latest/utils/arrays.html#getnestedvalue Ouzo Goodies - Arrays
+     */
+    public static function getNestedValue(array $array, array|string $path, string $separator = '.'): mixed
+    {
+        if (is_string($path)) {
+            $path = explode($separator, $path);
+        }
+        return Arrays::getNestedValue($array, $path);
+    }
+
+    /**
+     * Wrapper for {@see \Ouzo\Utilities\Arrays::setNestedValue()} to accept dot notation for the path.
+     *
+     * @link https://ouzo.readthedocs.io/en/latest/utils/arrays.html#setnestedvalue Ouzo Goodies - Arrays
+     */
+    public static function setNestedValue(
+        array &$array,
+        array|string $path,
+        mixed $value,
+        string $separator = '.'
+    ): void {
+        if (is_string($path)) {
+            $path = explode($separator, $path);
+        }
+        Arrays::setNestedValue($array, $path, $value);
+    }
+
+    /**
+     * Wrapper for {@see \Ouzo\Utilities\Arrays::removeNestedKey()} to accept dot notation for the path.
+     *
+     * @link https://ouzo.readthedocs.io/en/latest/utils/arrays.html#removenestedkey Ouzo Goodies - Arrays
+     */
+    public static function removeNestedKey(array &$array, array|string $path, string $separator = '.'): void
+    {
+        if (is_string($path)) {
+            $path = explode($separator, $path);
+        }
+        Arrays::removeNestedKey($array, $path);
+    }
+}

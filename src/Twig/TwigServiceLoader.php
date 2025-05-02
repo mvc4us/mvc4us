@@ -29,7 +29,7 @@ final class TwigServiceLoader
         $cacheDir = $projectDir . '/var/cache/twig';
         $options = [
             'cache' => $cacheDir,
-            'auto_reload' => Config::isDebug()
+            'auto_reload' => Config::isDev()
         ];
         if (!file_exists($templateDir)) {
             mkdir(directory: $templateDir, recursive: true);

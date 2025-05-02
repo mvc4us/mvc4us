@@ -95,7 +95,7 @@ abstract class AbstractController implements ControllerInterface
     {
         self::$callStack[static::class] = (self::$callStack[static::class] ?? 0) + 1;
 
-        $maxStack = Config::get('app', 'controller_forward_limit') ?? 10;
+        $maxStack = Config::get('app.controllerForwardLimit') ?? 10;
         if ((self::$callStack[$controllerName] ?? 0) > $maxStack) {
             throw new CircularForwardException(sprintf('Maximum forward recursion of %d reached.', $maxStack));
         }

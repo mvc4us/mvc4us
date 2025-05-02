@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mvc4us\Config;
 
+use Composer\InstalledVersions;
 use Mvc4us\Utils\ArrayUtils;
 use Yosymfony\Toml\Toml;
 
@@ -13,9 +14,7 @@ final class Config
 
     private static string $projectPath = "";
 
-    private static array $config = [
-        'debug' => false
-    ];
+    private static array $config = [];
 
     /**
      * This class should not be instantiated.
@@ -29,10 +28,10 @@ final class Config
         self::$projectPath = $projectPath;
         $basePath = self::$projectPath . DIRECTORY_SEPARATOR . 'config';
         $envConfig = self::getConfigByPath($basePath . DIRECTORY_SEPARATOR . 'env.toml');
-        self::$config = ArrayUtils::merge(self::$config, $envConfig);
+        self::$config = $envConfig;
         unset(self::$config['env'], self::$config['alias']);
-        $environment = $environment ?? $_ENV['MVC4US_ENV'] ?? $_SERVER['MVC4US_ENV'] ?? self::getArgvEnv()
-            ?? self::getHostEnv() ?? $envConfig['env'] ?? null;
+        $environment = $environment ?? self::getEnvEnv() ?? self::getArgvEnv() ?? self::getHostEnv()
+            ?? $envConfig['env'] ?? null;
 
         if (empty($environment)) {
             return;
@@ -61,59 +60,35 @@ final class Config
     }
 
     /**
-     * Check if in debug mode
+     * Check Composer requirements mode
      *
      * @return bool
      */
-    public static function isDebug(): bool
+    public static function isDev(): bool
     {
-        return self::$config['debug'] ?? false;
+        return InstalledVersions::getRootPackage()['dev'];
     }
 
     /**
-     * Get all configuration options of section
+     * Get a configuration option or null if not found
      *
-     * @param string $section
-     *            config section name
+     * @param string ...$path
+     *            either separate sections or a single argument of dot separated sections. Or even both mixed.
+     * @return mixed
+     */
+    public static function get(string ...$path): mixed
+    {
+        return ArrayUtils::getNestedValue(self::$config, implode('.', $path));
+    }
+
+    /**
+     * Get all configuration as array.
+     *
      * @return array
      */
-    public static function getAll(string $section): array
+    public static function getAll(): array
     {
-        if (isset(self::$config[$section]) && is_array(self::$config[$section])) {
-            return self::$config[$section];
-        }
-        // throw new InvalidConfigException(sprintf('Missing configuration section "%s".', $section));
-        return [];
-    }
-
-    /**
-     * Get a configuration option or null if option not found
-     *
-     * @param string $section
-     *            config section name
-     * @param string $option
-     *            config option in section
-     * @return mixed|null
-     */
-    public static function get(string $section, string $option): mixed
-    {
-        $config = self::getAll($section);
-        if (isset($config[$option])) {
-            return $config[$option];
-        }
-        // throw new InvalidConfigException(sprintf('Missing configuration option "%s" in section "%s".', $option, $section));
-        return null;
-    }
-
-    /**
-     * Use getEnvironment() instead
-     *
-     * @return string|null
-     * @deprecated
-     */
-    public static function environment(): ?string
-    {
-        return self::$environment;
+        return self::$config;
     }
 
     /**
@@ -143,6 +118,11 @@ final class Config
         return $config;
     }
 
+    private static function getEnvEnv(): ?string
+    {
+        return getenv('APP_ENV') ?: null;
+    }
+
     private static function getArgvEnv(): ?string
     {
         global $argv;
@@ -152,14 +132,15 @@ final class Config
                 continue;
             }
             [$key, $value] = explode('=', $item);
-            if ($key === '--env') {
-                unset($argv[$i]);
-                $argv = array_values($argv);
-                $argc = count($argv);
-                $_SERVER['argv'] = $argv;
-                $_SERVER['argc'] = $argc;
-                return $value;
+            if ($key !== '--env') {
+                continue;
             }
+            unset($argv[$i]);
+            $argv = array_values($argv);
+            $argc = count($argv);
+            $_SERVER['argv'] = $argv;
+            $_SERVER['argc'] = $argc;
+            return $value;
         }
         return null;
     }

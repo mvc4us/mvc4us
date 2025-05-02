@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Mvc4us\Utils;
@@ -7,7 +8,6 @@ use Mvc4us\Config\Config;
 
 final class CryptUtils
 {
-
     private const CIPHER_ALGO = 'aes-256-cbc';
     private const HASH_ALGO = 'sha256';
 
@@ -24,9 +24,6 @@ final class CryptUtils
             $key = self::getAppSecret();
         }
         $key = self::getCipherKey($key);
-        //if (mb_strlen($key, '8bit') !== 32) {
-        //    throw new \Exception("CryptUtils needs a 256-bit key!");
-        //}
 
         $ivSize = openssl_cipher_iv_length(self::CIPHER_ALGO);
         $iv = openssl_random_pseudo_bytes($ivSize);
@@ -86,9 +83,9 @@ final class CryptUtils
 
     public static function getAppSecret(): string
     {
-        $key = Config::get('security', 'key');
+        $key = Config::get('security.key');
         if (empty($key)) {
-            throw new \InvalidArgumentException('Secret key ([security].key) is not defined in any *.toml file.');
+            throw new \InvalidArgumentException('Secret key ([security.key]) is not defined in any *.toml file.');
         }
         return $key;
     }

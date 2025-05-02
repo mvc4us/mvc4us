@@ -28,12 +28,12 @@ class LoggerConfig
             self::$instance = new AdhocLogger();
             return;
         }
-        self::$instance = (new Logger($name))->useMicrosecondTimestamps(Config::get('log', 'useMicrosecond') ?? true);
+        self::$instance = (new Logger($name))->useMicrosecondTimestamps(Config::get('log.useMicrosecond') ?? true);
         self::$instance
             ->pushHandler(
                 (new StreamHandler(
                     $projectPath . '/var/log/' . $name . '.log',
-                    Config::get('log', 'level') ?? LogLevel::NOTICE
+                    Config::get('log.level') ?? LogLevel::NOTICE
                 ))->setFormatter(
                     (new LineFormatter(
                         format: "[%datetime%] %channel%.%level_name%: %message%%context.exception% %extra%" . PHP_EOL,
@@ -72,10 +72,9 @@ class LoggerConfig
                     formatted: $record->formatted
                 );
             });
-        if (Config::get('log', 'registerErrors') ?? false) {
-            //ErrorHandler::register(self::$instance);
+        if (Config::get('log.registerErrors') ?? false) {
             $handler = new ErrorHandler(self::$instance);
-            $handler->registerErrorHandler(handleOnlyReportedErrors: !Config::isDebug());
+            $handler->registerErrorHandler(handleOnlyReportedErrors: !Config::isDev());
             $handler->registerExceptionHandler();
             $handler->registerFatalHandler();
         }

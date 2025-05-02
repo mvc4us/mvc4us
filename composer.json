@@ -1,12 +1,11 @@
 {
   "name": "mvc4us/mvc4us",
-  "type": "library",
   "description": "A juicy PHP framework highly depends on symfony components.",
+  "license": "MIT",
+  "type": "library",
   "keywords": [
     "framework"
   ],
-  "homepage": "https://mvc4.us",
-  "license": "MIT",
   "authors": [
     {
       "name": "Erdem Uncuoğlu",
@@ -17,8 +16,10 @@
       "homepage": "https://mvc4.us/contributors"
     }
   ],
+  "homepage": "https://mvc4.us",
   "require": {
     "php": ">=8.1",
+    "letsdrink/ouzo-goodies": "^1.8",
     "psr/log": "^3.0",
     "symfony/config": "^6.3",
     "symfony/dependency-injection": "^6.3",
@@ -30,12 +31,27 @@
   "require-dev": {
     "ext-openssl": "*",
     "doctrine/annotations": "^1.13",
+    "ergebnis/composer-normalize": "^2.45",
+    "icanhazstring/composer-unused": "^0.9",
+    "jbzoo/composer-graph": "^1.4",
+    "maglnet/composer-require-checker": "^4.16",
     "monolog/monolog": "^3.2",
     "phpunit/phpunit": "^9.5",
+    "roave/security-advisories": "dev-latest",
     "symfony/property-access": "^6.3",
     "symfony/serializer": "^6.3",
+    "symplify/easy-coding-standard": "^12.3",
     "twig/twig": "^3.0"
   },
+  "suggest": {
+    "danielstjules/stringy": "A string manipulation library with multibyte support",
+    "doctrine/annotations": "Docblock Annotations Parser",
+    "monolog/monolog": "Sends your logs to files, sockets, inboxes, databases and various web services",
+    "mvc4us/cache": "Alternate cache implementation to PSR-6 and PSR-16",
+    "symfony/serializer": "Handles serializing and deserializing data structures, including object graphs, into array structures or other formats like XML and JSON.",
+    "twig/twig": "Twig, the flexible, fast, and secure template language for PHP"
+  },
+  "minimum-stability": "dev",
   "autoload": {
     "psr-4": {
       "Mvc4us\\": "src/"
@@ -49,13 +65,10 @@
   "bin": [
     "bin/mvc4us.php"
   ],
-  "suggest": {
-    "twig/twig": "Twig, the flexible, fast, and secure template language for PHP",
-    "monolog/monolog": "Sends your logs to files, sockets, inboxes, databases and various web services",
-    "danielstjules/stringy": "A string manipulation library with multibyte support",
-    "mvc4us/cache": "Alternate cache implementation to PSR-6 and PSR-16",
-    "symfony/serializer": "Handles serializing and deserializing data structures, including object graphs, into array structures or other formats like XML and JSON.",
-    "doctrine/annotations": "Docblock Annotations Parser"
-  },
-  "minimum-stability": "dev"
+  "config": {
+    "allow-plugins": {
+      "ergebnis/composer-normalize": true
+    },
+    "platform-check": true
+  }
 }
