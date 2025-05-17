@@ -73,12 +73,12 @@ final class Config
      * Get a configuration option or null if not found
      *
      * @param string ...$path
-     *            either separate sections or a single argument of dot separated sections. Or even both mixed.
+     *            Either sections as arguments or a single argument of dot separated sections. Or even both mixed.
      * @return mixed
      */
     public static function get(string ...$path): mixed
     {
-        return ArrayUtils::getNestedValue(self::$config, implode('.', $path));
+        return ArrayUtils::getNestedValue(self::$config, $path);
     }
 
     /**

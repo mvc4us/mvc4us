@@ -57,9 +57,10 @@ final class ArrayUtils
      */
     public static function getNestedValue(array $array, array|string $path, string $separator = '.'): mixed
     {
-        if (is_string($path)) {
-            $path = explode($separator, $path);
+        if (is_array($path)) {
+            $path = implode($separator, $path);
         }
+        $path = explode($separator, $path);
         return Arrays::getNestedValue($array, $path);
     }
 
@@ -74,9 +75,10 @@ final class ArrayUtils
         mixed $value,
         string $separator = '.'
     ): void {
-        if (is_string($path)) {
-            $path = explode($separator, $path);
+        if (is_array($path)) {
+            $path = implode($separator, $path);
         }
+        $path = explode($separator, $path);
         Arrays::setNestedValue($array, $path, $value);
     }
 
@@ -87,9 +89,10 @@ final class ArrayUtils
      */
     public static function removeNestedKey(array &$array, array|string $path, string $separator = '.'): void
     {
-        if (is_string($path)) {
-            $path = explode($separator, $path);
+        if (is_array($path)) {
+            $path = implode($separator, $path);
         }
+        $path = explode($separator, $path);
         Arrays::removeNestedKey($array, $path);
     }
 }
