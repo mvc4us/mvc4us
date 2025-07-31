@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Mvc4us\Serializer;
@@ -13,6 +14,13 @@ use Symfony\Component\Serializer\Serializer;
 
 class ExtendedSymfonySerializer extends Serializer
 {
+    /**
+     * @template T
+     * @param string $json
+     * @param object<T>|class-string<T> $object
+     * @param array $context
+     * @return T
+     */
     public function parseJson(string $json, object|string $object, array $context = []): mixed
     {
         return $this->deserialize(

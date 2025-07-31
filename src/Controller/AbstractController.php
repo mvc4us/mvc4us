@@ -141,11 +141,12 @@ abstract class AbstractController implements ControllerInterface
 
     /**
      * Parses a json string and returns as an object or populates an object instance using Symfony Serializer
+     * @template T
      *
-     * @param string $json          A json string
-     * @param object|string $object An object instance or type of object
-     * @param array $context        Context to pass to serializer when using serializer component
-     * @return mixed
+     * @param string $json                      A json string
+     * @param object<T>|class-string<T> $object An object instance or type of object
+     * @param array $context                    Context to pass to serializer when using serializer component
+     * @return T
      */
     protected function parseJson(string $json, object|string $object, array $context = []): mixed
     {
