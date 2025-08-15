@@ -10,7 +10,6 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Monolog\LogRecord;
 use Monolog\Processor\PsrLogMessageProcessor;
-use Monolog\Utils;
 use Mvc4us\Config\Config;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
@@ -28,8 +27,8 @@ class LoggerConfig
             self::$instance = new AdhocLogger();
             return;
         }
-        self::$instance = (new Logger($name))->useMicrosecondTimestamps(Config::get('log.useMicrosecond') ?? true);
-        self::$instance
+        self::$instance = (new Logger($name))
+            ->useMicrosecondTimestamps(Config::get('log.useMicrosecond') ?? true)
             ->pushHandler(
                 (new StreamHandler(
                     $projectPath . '/var/log/' . $name . '.log',
@@ -38,35 +37,16 @@ class LoggerConfig
                     (new LineFormatter(
                         format: "[%datetime%] %channel%.%level_name%: %message%%context.exception% %extra%" . PHP_EOL,
                         ignoreEmptyContextAndExtra: true
-                    ))->includeStacktraces(true, function ($line) {
-                        return preg_replace(
-                            '/(#[0-9]+) ([^(^)]+)\(([0-9]+)\): (.+)/',
-                            //'$1 $4 in $2 on line $3',
-                            '$1 $4 at $2:$3',
-                            $line
-                        );
-                    })
+                    ))->includeStacktraces(Config::get('log.includeStacktraces') ?? true)
                 )
             )
             ->pushProcessor(new PsrLogMessageProcessor())
             ->pushProcessor(callback: function (LogRecord $record) {
-                $nl = (!empty($record->context) || !empty($record->extra)) ? PHP_EOL : " ";
-                if (isset($record->context['exception'])) {
-                    $e = $record->context['exception'];
-                    //unset($context['exception']);
-                    $message = sprintf(
-                        '%s%s',
-                        ($record->message ? $record->message . PHP_EOL : '') . Utils::getClass($e),
-                        $nl
-                    );
-                } else {
-                    $message = sprintf("%s%s", $record->message, $nl);
-                }
                 return new LogRecord(
                     datetime: $record->datetime,
                     channel: $record->channel,
                     level: $record->level,
-                    message: $message,
+                    message: $record->message . (empty($record->context) && empty($record->extra) ? "" : PHP_EOL),
                     context: $record->context,
                     extra: $record->extra,
                     formatted: $record->formatted
