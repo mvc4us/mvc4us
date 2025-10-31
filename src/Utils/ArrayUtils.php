@@ -95,4 +95,32 @@ final class ArrayUtils
         $path = explode($separator, $path);
         Arrays::removeNestedKey($array, $path);
     }
+
+    /**
+     * Variadic version of {@link https://github.com/gajus/marray Marray diff_key_recursive()}.
+     *
+     * @param array $array
+     * @param array ...$arrays
+     * @return array
+     * @link https://github.com/gajus/marray/blob/d93218863be26848b502094d29c803a02c6457e2/src/marray.php#L78
+     */
+    public static function diffKeyRecursive(array $array, array ...$arrays): array
+    {
+        $diff = $array;
+        while (null !== $array2 = array_shift($arrays)) {
+            $diff = array_diff_key($array, $array2);
+            $intersect = array_intersect_key($array, $array2);
+
+            foreach ($intersect as $k => $v) {
+                if (is_array($array[$k]) && is_array($array2[$k])) {
+                    $d = self::diffKeyRecursive($array[$k], $array2[$k]);
+
+                    if ($d) {
+                        $diff[$k] = $d;
+                    }
+                }
+            }
+        }
+        return $diff;
+    }
 }
